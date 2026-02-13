@@ -5,3 +5,5 @@ playwright
 pydantic
 python-multipart
 requests
+psycopg2-binary
+python-dotenv
