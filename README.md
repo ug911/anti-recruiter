@@ -29,10 +29,11 @@ The repository is organized into two main parts:
 - **Automation**: Playwright (for portal management)
 
 ### Frontend
-- **Framework**: [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **State Management**: [TanStack Query (React Query)](https://tanstack.com/query/latest)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + Framer Motion (animations)
+- **Framework**: [Next.js 14+](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) (based on Radix UI)
+- **State Management**: [TanStack Query](https://tanstack.com/query/latest)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 
 ---
 
@@ -77,7 +78,7 @@ Follow these steps to set up and run the project locally.
    ```bash
    npm run dev
    ```
-   The application will be available at `http://localhost:5173`.
+   The application will be available at `http://localhost:3000` (Next.js default).
 
 ---
 
