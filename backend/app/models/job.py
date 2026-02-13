@@ -2,11 +2,9 @@ from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import date
 
-class JobPosting(SQLModel, table=False):
-    # We use table=False because we are not storing this in our local DB anymore.
-    # It is just a Pydantic model for validation.
-    
-    id: Optional[str] = None
+class JobPosting(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    zoho_id: Optional[str] = None
     title: str
     description: str
     location: str
