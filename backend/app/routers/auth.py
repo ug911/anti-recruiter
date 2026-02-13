@@ -16,6 +16,6 @@ def zoho_callback(code: str):
     try:
         tokens = ZohoAuthService.exchange_code_for_token(code)
         # Redirect back to Frontend Dashboard after successful login
-        return RedirectResponse("http://localhost:5173/?zoho_connected=true")
+        return RedirectResponse("http://localhost:3000/?zoho_connected=true")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
