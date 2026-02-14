@@ -105,6 +105,44 @@ class ZohoJobService:
         return []
 
     @staticmethod
+    def get_candidate_details(candidate_id: str):
+        url = f"{ZOHO_API_BASE}/Candidates/{candidate_id}"
+        response = requests.get(url, headers=ZohoJobService._get_headers())
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("data"):
+                # Return raw Zoho data, mapping can be done in router or frontend if needed
+                return data["data"][0]
+        return None
+
+    @staticmethod
+    def update_candidate_status(job_id: str, candidate_id: str, status: str):
+        # In this Zoho account, updating the Candidate record directly with Application_Status
+        # is the most reliable way to reflect status changes.
+        url = f"{ZOHO_API_BASE}/Candidates/{candidate_id}"
+        payload = {
+            "data": [
+                {
+                    "Application_Status": status
+                }
+            ]
+        }
+        response = requests.put(url, headers=ZohoJobService._get_headers(), json=payload)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("data") and data["data"][0]["status"] == "success":
+                return True
+        
+        # If direct update failed, try the association endpoint as plan B
+        url_assoc = f"{ZOHO_API_BASE}/Job_Openings/{job_id}/associate"
+        response_assoc = requests.put(url_assoc, headers=ZohoJobService._get_headers(), json=payload)
+        if response_assoc.status_code == 200:
+             return True
+
+        raise Exception(f"Failed to update status in Zoho: {response.text}")
+
+    @staticmethod
     def get_job_apply_url(job_id: str):
         # In a real scenario, you might query the "Publish" module or construct it
         # For now, we construct a hypothetical Career Page URL based on ID

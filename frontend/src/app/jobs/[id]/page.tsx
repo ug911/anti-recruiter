@@ -1,27 +1,41 @@
 'use client';
 
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchJobs, JobPosting } from '@/lib/api/jobs';
+import { fetchJobs } from '@/lib/api/jobs';
+import { fetchCandidates } from '@/lib/api/candidates';
 import CandidateList from '@/components/CandidateList';
+import KanbanBoard from '@/components/KanbanBoard';
+import CandidateDetailModal from '@/components/CandidateDetailModal';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MapPin, Briefcase, Factory, Banknote, Calendar } from 'lucide-react';
+import {
+    ArrowLeft, MapPin, Briefcase, Factory,
+    Banknote, Calendar, LayoutGrid, List
+} from 'lucide-react';
 
 export default function JobDetailsPage() {
     const params = useParams();
     const id = params.id as string;
+    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+    const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
 
-    const { data: jobs, isLoading } = useQuery({
+    const { data: jobs, isLoading: isJobsLoading } = useQuery({
         queryKey: ['jobs'],
         queryFn: fetchJobs
     });
 
+    const { data: candidates, isLoading: isCandidatesLoading } = useQuery({
+        queryKey: ['candidates', id],
+        queryFn: () => fetchCandidates(id)
+    });
+
     const job = jobs?.find(j => j.id === id);
 
-    if (isLoading) return <div className="space-y-8 animate-pulse"><div className="h-8 bg-muted rounded w-1/4"></div><div className="h-96 bg-muted rounded"></div></div>;
+    if (isJobsLoading) return <div className="space-y-8 animate-pulse"><div className="h-8 bg-muted rounded w-1/4"></div><div className="h-96 bg-muted rounded"></div></div>;
     if (!job) return (
         <div className="text-center py-20">
             <h2 className="text-2xl font-bold">Job not found</h2>
@@ -33,11 +47,32 @@ export default function JobDetailsPage() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-8">
-            <Button variant="ghost" asChild className="mb-4">
-                <Link href="/">
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-                </Link>
-            </Button>
+            <div className="flex justify-between items-center">
+                <Button variant="ghost" asChild>
+                    <Link href="/">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
+                    </Link>
+                </Button>
+
+                <div className="flex bg-muted p-1 rounded-lg border shadow-inner">
+                    <Button
+                        variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                        className={`gap-2 rounded-md transition-all ${viewMode === 'list' ? 'shadow-sm bg-background' : ''}`}
+                    >
+                        <List className="h-4 w-4" /> List
+                    </Button>
+                    <Button
+                        variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('kanban')}
+                        className={`gap-2 rounded-md transition-all ${viewMode === 'kanban' ? 'shadow-sm bg-background' : ''}`}
+                    >
+                        <LayoutGrid className="h-4 w-4" /> Kanban
+                    </Button>
+                </div>
+            </div>
 
             <Card className="border-border/50 shadow-xl overflow-hidden">
                 <div className="h-2 bg-gradient-to-r from-purple-500 to-blue-500 w-full" />
@@ -86,9 +121,25 @@ export default function JobDetailsPage() {
                         </div>
                     </div>
 
-                    <CandidateList jobId={id} />
+                    <div className="border-t pt-8">
+                        {isCandidatesLoading ? (
+                            <div className="space-y-4 animate-pulse"><div className="h-8 bg-muted rounded w-1/4"></div><div className="h-64 bg-muted rounded"></div></div>
+                        ) : viewMode === 'list' ? (
+                            <CandidateList jobId={id} onCandidateClick={setSelectedCandidateId} />
+                        ) : (
+                            <KanbanBoard jobId={id} candidates={candidates || []} onCandidateClick={setSelectedCandidateId} />
+                        )}
+                    </div>
                 </CardContent>
             </Card>
+
+            {selectedCandidateId && (
+                <CandidateDetailModal
+                    jobId={id}
+                    candidateId={selectedCandidateId}
+                    onClose={() => setSelectedCandidateId(null)}
+                />
+            )}
         </div>
     );
 }

@@ -47,3 +47,21 @@ def read_job(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+@router.get("/{job_id}/candidates/{candidate_id}", response_model=dict)
+def read_candidate_details(job_id: str, candidate_id: str):
+    candidate = ZohoJobService.get_candidate_details(candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    return candidate
+
+@router.patch("/{job_id}/candidates/{candidate_id}/status", response_model=dict)
+def update_candidate_status(job_id: str, candidate_id: str, status_update: dict):
+    status = status_update.get("status")
+    if not status:
+        raise HTTPException(status_code=400, detail="Missing status in request body")
+    
+    try:
+        ZohoJobService.update_candidate_status(job_id, candidate_id, status)
+        return {"message": "Status updated successfully", "status": status}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

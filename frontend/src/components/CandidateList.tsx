@@ -11,9 +11,10 @@ import { FileText, Mail, Calendar, User } from 'lucide-react';
 
 interface CandidateListProps {
     jobId: string;
+    onCandidateClick?: (candidateId: string) => void;
 }
 
-export default function CandidateList({ jobId }: CandidateListProps) {
+export default function CandidateList({ jobId, onCandidateClick }: CandidateListProps) {
     const { data: candidates, isLoading, error } = useQuery({
         queryKey: ['candidates', jobId],
         queryFn: () => fetchCandidates(jobId),
@@ -49,8 +50,12 @@ export default function CandidateList({ jobId }: CandidateListProps) {
                             </TableHeader>
                             <TableBody>
                                 {candidates.map((candidate) => (
-                                    <TableRow key={candidate.id} className="hover:bg-muted/30 transition-colors">
-                                        <TableCell className="font-semibold">
+                                    <TableRow
+                                        key={candidate.id}
+                                        className="hover:bg-primary/5 transition-colors cursor-pointer group/row"
+                                        onClick={() => onCandidateClick?.(candidate.id)}
+                                    >
+                                        <TableCell className="font-semibold group-hover/row:text-primary transition-colors">
                                             {candidate.first_name} {candidate.last_name}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">

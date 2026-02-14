@@ -16,3 +16,13 @@ export const fetchCandidates = async (jobId: string): Promise<Candidate[]> => {
     const response = await apiClient.get(`/jobs/${jobId}/candidates`);
     return response.data;
 };
+
+export const fetchCandidateById = async (jobId: string, candidateId: string): Promise<any> => {
+    const response = await apiClient.get(`/jobs/${jobId}/candidates/${candidateId}`);
+    return response.data;
+};
+
+export const updateCandidateStatus = async (jobId: string, candidateId: string, status: string): Promise<any> => {
+    const response = await apiClient.patch(`/jobs/${jobId}/candidates/${candidateId}/status`, { status });
+    return response.data;
+};
