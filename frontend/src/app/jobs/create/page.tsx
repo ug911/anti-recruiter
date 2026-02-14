@@ -51,7 +51,7 @@ export default function CreateJobPage() {
 
             <header>
                 <h1 className="text-4xl font-extrabold tracking-tight">Create Job Posting</h1>
-                <p className="text-muted-foreground text-lg mt-2">Publish a new role to Zoho Recruit and start receiving candidates.</p>
+                <p className="text-muted-foreground text-lg mt-2">Publish a new role and start receiving candidates.</p>
             </header>
 
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -176,7 +176,7 @@ export default function CreateJobPage() {
                     >
                         {createJobMutation.isPending ? 'Publishing...' : (
                             <>
-                                <Rocket className="mr-2 h-5 w-5" /> Publish to Zoho Recruit
+                                <Rocket className="mr-2 h-5 w-5" /> Publish Job
                             </>
                         )}
                     </Button>

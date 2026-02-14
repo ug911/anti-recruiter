@@ -4,7 +4,6 @@ import "./globals.css";
 import Providers from "@/components/providers/query-provider";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ConnectZohoButton } from "@/components/connect-zoho-button";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,7 +33,6 @@ export default function RootLayout({
                 <Button variant="ghost" asChild>
                   <Link href="/jobs/create">Create Job</Link>
                 </Button>
-                <ConnectZohoButton />
               </nav>
             </div>
           </header>

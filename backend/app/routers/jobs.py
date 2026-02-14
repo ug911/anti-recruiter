@@ -34,9 +34,8 @@ def read_jobs():
         jobs = ZohoJobService.get_jobs()
         return jobs
     except Exception as e:
-        # If token expired or not logged in, return empty or error
-        print(f"Zoho Fetch Error: {e}") 
-        return []
+        print(f"DEBUG: Zoho Fetch Error in router: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Zoho API Error: {str(e)}")
 
 @router.get("/{job_id}/candidates", response_model=List[dict])
 def read_job_candidates(job_id: str):

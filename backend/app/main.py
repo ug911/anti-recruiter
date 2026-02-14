@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-from app.routers import jobs, auth
+from app.routers import jobs
 
 app = FastAPI(
     title="Job Auto-Poster",
@@ -27,14 +27,13 @@ app = FastAPI(
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(jobs.router)
-app.include_router(auth.router)
 
 @app.get("/")
 def read_root():

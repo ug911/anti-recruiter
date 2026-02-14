@@ -1,7 +1,7 @@
 import requests
 from app.services.zoho_auth import ZohoAuthService
 
-ZOHO_API_BASE = "https://recruit.zoho.in/recruit/v2"
+ZOHO_API_BASE = "https://recruit.zoho.com/recruit/v2"
 
 class ZohoJobService:
     @staticmethod
@@ -23,6 +23,8 @@ class ZohoJobService:
             "data": [
                 {
                     "Posting_Title": job_data.get("title"),
+                    "Job_Opening_Name": job_data.get("title"),
+                    "Client_Name": "My company",
                     "City": job_data.get("location"),
                     "Salary": job_data.get("salary_range"),
                     "Work_Experience": job_data.get("experience_required"),
@@ -64,7 +66,9 @@ class ZohoJobService:
                     "description": item.get("Job_Description") or "No description",
                 })
             return jobs
-        return []
+        if response.status_code == 204: # Zoho 'No Content'
+            return []
+        raise Exception(f"Zoho API Error: {response.status_code} - {response.text}")
 
     @staticmethod
     def get_job_details(job_id: str):
@@ -92,4 +96,4 @@ class ZohoJobService:
     def get_job_apply_url(job_id: str):
         # In a real scenario, you might query the "Publish" module or construct it
         # For now, we construct a hypothetical Career Page URL based on ID
-        return f"https://jobs.zoho.in/recruit/careers/demo_company/job-details/{job_id}"
+        return f"https://jobs.zoho.com/recruit/careers/demo_company/job-details/{job_id}"
