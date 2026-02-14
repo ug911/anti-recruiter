@@ -48,7 +48,8 @@ class ZohoJobService:
     @staticmethod
     def get_jobs():
         url = f"{ZOHO_API_BASE}/JobOpenings"
-        params = {"fields": "id,Posting_Title,City,Job_Opening_Status,Salary,Industry,Job_Type,Target_Date,Job_Description"} 
+        # Include Client_Name and Job_Opening_Status
+        params = {"fields": "id,Posting_Title,City,Job_Opening_Status,Salary,Industry,Job_Type,Target_Date,Job_Description,Client_Name"} 
         response = requests.get(url, headers=ZohoJobService._get_headers(), params=params)
         
         if response.status_code == 200:
@@ -64,11 +65,30 @@ class ZohoJobService:
                     "job_type": item.get("Job_Type"),
                     "target_date": item.get("Target_Date"),
                     "description": item.get("Job_Description") or "No description",
+                    "client_name": item.get("Client_Name").get("name") if isinstance(item.get("Client_Name"), dict) else item.get("Client_Name"),
+                    "status": item.get("Job_Opening_Status"),
                 })
             return jobs
         if response.status_code == 204: # Zoho 'No Content'
             return []
         raise Exception(f"Zoho API Error: {response.status_code} - {response.text}")
+
+    @staticmethod
+    def archive_job(job_id: str):
+        url = f"{ZOHO_API_BASE}/JobOpenings/{job_id}"
+        payload = {
+            "data": [
+                {
+                    "Job_Opening_Status": "Cancelled" # Or "Archived" if custom, using Cancelled as standard
+                }
+            ]
+        }
+        response = requests.put(url, headers=ZohoJobService._get_headers(), json=payload)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("data") and data["data"][0]["status"] == "success":
+                return True
+        raise Exception(f"Failed to archive job in Zoho: {response.text}")
 
     @staticmethod
     def get_job_details(job_id: str):

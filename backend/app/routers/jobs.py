@@ -65,3 +65,10 @@ def update_candidate_status(job_id: str, candidate_id: str, status_update: dict)
         return {"message": "Status updated successfully", "status": status}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+@router.patch("/{job_id}/archive", response_model=dict)
+def archive_job(job_id: str):
+    try:
+        ZohoJobService.archive_job(job_id)
+        return {"message": "Job archived successfully", "id": job_id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

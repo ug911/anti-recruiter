@@ -8,10 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mail, Phone, Calendar, User, MoreHorizontal, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+import { useRouter } from 'next/navigation';
+
 interface KanbanBoardProps {
     jobId: string;
     candidates: Candidate[];
-    onCandidateClick: (candidateId: string) => void;
 }
 
 export const KANBAN_STAGES = [
@@ -24,7 +25,8 @@ export const KANBAN_STAGES = [
     { id: 'Archived', label: 'Archived', statuses: ['Archived'], color: 'gray' }
 ];
 
-export default function KanbanBoard({ jobId, candidates, onCandidateClick }: KanbanBoardProps) {
+export default function KanbanBoard({ jobId, candidates }: KanbanBoardProps) {
+    const router = useRouter();
     const queryClient = useQueryClient();
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
@@ -89,7 +91,7 @@ export default function KanbanBoard({ jobId, candidates, onCandidateClick }: Kan
                                         key={candidate.id}
                                         draggable
                                         onDragStart={(e) => onDragStart(e, candidate.id)}
-                                        onClick={() => onCandidateClick(candidate.id)}
+                                        onClick={() => router.push(`/jobs/${jobId}/candidates/${candidate.id}`)}
                                         className="bg-background border shadow-sm rounded-lg p-4 cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group relative overflow-hidden active:scale-95 active:rotate-1"
                                     >
                                         <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">

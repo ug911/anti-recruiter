@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Mail, Calendar, User } from 'lucide-react';
 
+import { useRouter, useParams } from 'next/navigation';
+
 interface CandidateListProps {
     jobId: string;
-    onCandidateClick?: (candidateId: string) => void;
 }
 
-export default function CandidateList({ jobId, onCandidateClick }: CandidateListProps) {
+export default function CandidateList({ jobId }: CandidateListProps) {
+    const router = useRouter();
     const { data: candidates, isLoading, error } = useQuery({
         queryKey: ['candidates', jobId],
         queryFn: () => fetchCandidates(jobId),
@@ -53,7 +55,7 @@ export default function CandidateList({ jobId, onCandidateClick }: CandidateList
                                     <TableRow
                                         key={candidate.id}
                                         className="hover:bg-primary/5 transition-colors cursor-pointer group/row"
-                                        onClick={() => onCandidateClick?.(candidate.id)}
+                                        onClick={() => router.push(`/jobs/${jobId}/candidates/${candidate.id}`)}
                                     >
                                         <TableCell className="font-semibold group-hover/row:text-primary transition-colors">
                                             {candidate.first_name} {candidate.last_name}

@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers/query-provider";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { PortalProvider } from "@/components/providers/portal-provider";
+import Header from "@/components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Anti-Recruiter",
-  description: "Modern recruitment automation",
+  title: "Anti-Recruiter | Modern Dashboard",
+  description: "Advanced recruitment automation and vendor portal",
 };
 
 export default function RootLayout({
@@ -18,27 +19,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-background text-foreground min-h-screen`}>
+    <html lang="en">
+      <body className={`${inter.className} bg-background text-foreground min-h-screen selection:bg-primary/20`}>
         <Providers>
-          <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
-            <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-              <Link href="/" className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                Anti-Recruiter
-              </Link>
-              <nav className="flex items-center gap-4">
-                <Button variant="ghost" asChild>
-                  <Link href="/">Dashboard</Link>
-                </Button>
-                <Button variant="ghost" asChild>
-                  <Link href="/jobs/create">Create Job</Link>
-                </Button>
-              </nav>
-            </div>
-          </header>
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
+          <ThemeProvider>
+            <PortalProvider>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-1 container mx-auto px-4 py-8">
+                  {children}
+                </main>
+                <footer className="border-t border-border/40 py-8 bg-muted/20">
+                  <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+                    &copy; 2026 Anti-Recruiter. Built for efficiency.
+                  </div>
+                </footer>
+              </div>
+            </PortalProvider>
+          </ThemeProvider>
         </Providers>
       </body>
     </html>
