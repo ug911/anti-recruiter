@@ -82,14 +82,26 @@ class ZohoJobService:
 
     @staticmethod
     def get_associated_candidates(job_id: str):
-        # Use `getAssociatedRecords` API: /recruit/v2/JobOpenings/{id}/Candidates
-        # Note: In Zoho Recruit this might vary based on setup. 
-        # For simplicity, returning empty if API differs, but removing mock.
-        url = f"{ZOHO_API_BASE}/JobOpenings/{job_id}/Candidates"
+        # Use the correct related list endpoint for associated candidates
+        url = f"{ZOHO_API_BASE}/Job_Openings/{job_id}/associate"
         response = requests.get(url, headers=ZohoJobService._get_headers())
+        
         if response.status_code == 200:
-             data = response.json()
-             return data.get('data', [])
+            data = response.json()
+            candidates = []
+            for item in data.get("data", []):
+                candidates.append({
+                    "id": item.get("id"),
+                    "first_name": item.get("First_Name"),
+                    "last_name": item.get("Last_Name"),
+                    "email": item.get("Email"),
+                    "phone": item.get("Phone") or item.get("Mobile"),
+                    "status": item.get("Application_Status") or item.get("Candidate_Stage") or "Applied",
+                    "applied_date": item.get("Created_Time", "").split('T')[0],
+                    "resume_url": item.get("resume_url"), # Note: Resume handle might require extra API calls
+                    "job_id": job_id
+                })
+            return candidates
         return []
 
     @staticmethod
