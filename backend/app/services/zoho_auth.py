@@ -76,8 +76,11 @@ class ZohoAuthService:
             raise Exception(f"Failed to exchange token: {response.text}")
 
     @staticmethod
-    def get_access_token():
+    def get_access_token(force_refresh=False):
         """Returns valid access token, refreshing if necessary"""
+        if force_refresh:
+            _token_storage["access_token"] = None
+            
         token = _token_storage.get("access_token")
         if not token:
             # Try to refresh using the refresh token

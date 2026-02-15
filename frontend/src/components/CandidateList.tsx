@@ -1,26 +1,34 @@
 'use client';
 
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCandidates } from '@/lib/api/candidates';
+import { Candidate, fetchCandidates } from '@/lib/api/candidates';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Mail, Calendar, User } from 'lucide-react';
+import { FileText, Mail, Calendar, User, Search } from 'lucide-react';
 
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 interface CandidateListProps {
     jobId: string;
+    candidates?: Candidate[];
+    isLoading?: boolean;
 }
 
-export default function CandidateList({ jobId }: CandidateListProps) {
+export default function CandidateList({ jobId, candidates: propCandidates, isLoading: propIsLoading }: CandidateListProps) {
     const router = useRouter();
-    const { data: candidates, isLoading, error } = useQuery({
+
+    // Use props if provided, otherwise fetch (fallback)
+    const { data: fetchedCandidates, isLoading: fetchedIsLoading, error: fetchedError } = useQuery({
         queryKey: ['candidates', jobId],
         queryFn: () => fetchCandidates(jobId),
+        enabled: !propCandidates
     });
+
+    const candidates = propCandidates ?? fetchedCandidates;
+    const isLoading = propIsLoading ?? fetchedIsLoading;
+    const error = fetchedError;
 
     if (isLoading) return <div className="space-y-4 animate-pulse"><div className="h-8 bg-muted rounded w-1/4"></div><div className="h-64 bg-muted rounded"></div></div>;
     if (error) return <div className="text-destructive p-4 border border-destructive/20 bg-destructive/10 rounded-lg">Error loading candidates.</div>;

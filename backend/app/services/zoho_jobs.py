@@ -5,15 +5,27 @@ ZOHO_API_BASE = "https://recruit.zoho.com/recruit/v2"
 
 class ZohoJobService:
     @staticmethod
-    def _get_headers():
-        token = ZohoAuthService.get_access_token()
+    def _get_headers(force_refresh=False):
+        token = ZohoAuthService.get_access_token(force_refresh=force_refresh)
         if not token:
-            # In a real app, try refresh token here
             raise Exception("No active Zoho token. Please login.")
         return {
             "Authorization": f"Zoho-oauthtoken {token}",
             "Content-Type": "application/json"
         }
+
+    @staticmethod
+    def _make_request(method, url, **kwargs):
+        # Initial attempt
+        headers = ZohoJobService._get_headers()
+        response = requests.request(method, url, headers=headers, **kwargs)
+        
+        # If unauthorized, refresh and retry once
+        if response.status_code == 401:
+            headers = ZohoJobService._get_headers(force_refresh=True)
+            response = requests.request(method, url, headers=headers, **kwargs)
+            
+        return response
 
     @staticmethod
     def create_job(job_data: dict):
@@ -37,7 +49,7 @@ class ZohoJobService:
             ]
         }
         
-        response = requests.post(url, headers=ZohoJobService._get_headers(), json=payload)
+        response = ZohoJobService._make_request("POST", url, json=payload)
         if response.status_code in [200, 201]:
              data = response.json()
              if data.get('data') and data['data'][0]['status'] == 'success':
@@ -50,7 +62,7 @@ class ZohoJobService:
         url = f"{ZOHO_API_BASE}/JobOpenings"
         # Include Client_Name and Job_Opening_Status
         params = {"fields": "id,Posting_Title,City,Job_Opening_Status,Salary,Industry,Job_Type,Target_Date,Job_Description,Client_Name"} 
-        response = requests.get(url, headers=ZohoJobService._get_headers(), params=params)
+        response = ZohoJobService._make_request("GET", url, params=params)
         
         if response.status_code == 200:
             data = response.json()
@@ -83,7 +95,7 @@ class ZohoJobService:
                 }
             ]
         }
-        response = requests.put(url, headers=ZohoJobService._get_headers(), json=payload)
+        response = ZohoJobService._make_request("PUT", url, json=payload)
         if response.status_code == 200:
             data = response.json()
             if data.get("data") and data["data"][0]["status"] == "success":
@@ -93,7 +105,7 @@ class ZohoJobService:
     @staticmethod
     def get_job_details(job_id: str):
         url = f"{ZOHO_API_BASE}/JobOpenings/{job_id}"
-        response = requests.get(url, headers=ZohoJobService._get_headers())
+        response = ZohoJobService._make_request("GET", url)
         if response.status_code == 200:
             data = response.json()
             if data.get("data"):
@@ -104,7 +116,7 @@ class ZohoJobService:
     def get_associated_candidates(job_id: str):
         # Use the correct related list endpoint for associated candidates
         url = f"{ZOHO_API_BASE}/Job_Openings/{job_id}/associate"
-        response = requests.get(url, headers=ZohoJobService._get_headers())
+        response = ZohoJobService._make_request("GET", url)
         
         if response.status_code == 200:
             data = response.json()
@@ -127,7 +139,7 @@ class ZohoJobService:
     @staticmethod
     def get_candidate_details(candidate_id: str):
         url = f"{ZOHO_API_BASE}/Candidates/{candidate_id}"
-        response = requests.get(url, headers=ZohoJobService._get_headers())
+        response = ZohoJobService._make_request("GET", url)
         if response.status_code == 200:
             data = response.json()
             if data.get("data"):
@@ -137,30 +149,41 @@ class ZohoJobService:
 
     @staticmethod
     def update_candidate_status(job_id: str, candidate_id: str, status: str):
-        # In this Zoho account, updating the Candidate record directly with Application_Status
-        # is the most reliable way to reflect status changes.
+        # For associated candidates, the most reliable way is often updating via the association endpoint
+        # or updating the 'Application_Status' if that's what we're filtering on.
+        # We'll try updating both the association status and the candidate record.
+        
+        # 1. Update Candidate record
         url = f"{ZOHO_API_BASE}/Candidates/{candidate_id}"
         payload = {
             "data": [
                 {
-                    "Application_Status": status
+                    "Application_Status": status,
+                    "Candidate_Stage": status # Sync both fields for safety
                 }
             ]
         }
-        response = requests.put(url, headers=ZohoJobService._get_headers(), json=payload)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("data") and data["data"][0]["status"] == "success":
-                return True
-        
-        # If direct update failed, try the association endpoint as plan B
+        res1 = ZohoJobService._make_request("PUT", url, json=payload)
+        print(f"DEBUG: Candidate update response: {res1.status_code} - {res1.text}")
+
+        # 2. Update Association status (this is often the one used in Kanban)
+        # Zoho association update payload typically looks like this
         url_assoc = f"{ZOHO_API_BASE}/Job_Openings/{job_id}/associate"
-        response_assoc = requests.put(url_assoc, headers=ZohoJobService._get_headers(), json=payload)
+        payload_assoc = {
+            "data": [
+                {
+                    "id": candidate_id,
+                    "Status": status # For association records, the field is often simply 'Status'
+                }
+            ]
+        }
+        response_assoc = ZohoJobService._make_request("PUT", url_assoc, json=payload_assoc)
+        print(f"DEBUG: Association update response: {response_assoc.status_code} - {response_assoc.text}")
+        
         if response_assoc.status_code == 200:
              return True
 
-        raise Exception(f"Failed to update status in Zoho: {response.text}")
+        raise Exception(f"Failed to update status in Zoho: {response_assoc.text}")
 
     @staticmethod
     def get_job_apply_url(job_id: str):
