@@ -30,7 +30,7 @@ def generate_refresh_token():
         print("Error: No grant code provided.")
         return
 
-    token_url = "https://accounts.zoho.com/oauth/v2/token"
+    token_url = "https://accounts.zoho.in/oauth/v2/token"
     
     data = {
         "grant_type": "authorization_code",

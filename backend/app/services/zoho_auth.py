@@ -11,8 +11,8 @@ ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
 ZOHO_REDIRECT_URI = os.getenv("ZOHO_REDIRECT_URI") 
 ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
 
-ZOHO_AUTH_URL = "https://accounts.zoho.com/oauth/v2/auth"
-ZOHO_TOKEN_URL = "https://accounts.zoho.com/oauth/v2/token"
+ZOHO_AUTH_URL = "https://accounts.zoho.in/oauth/v2/auth"
+ZOHO_TOKEN_URL = "https://accounts.zoho.in/oauth/v2/token"
 
 # Simple in-memory storage for MVP. In prod, use DB.
 _token_storage = {
