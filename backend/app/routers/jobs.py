@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import List
 from sqlmodel import Session
+from datetime import date
 from app.database import engine
 from app.models.job import JobPosting
 from app.services.zoho_jobs import ZohoJobService
@@ -8,10 +9,16 @@ from app.services.zoho_jobs import ZohoJobService
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 @router.post("/", response_model=dict)
-def create_job(job: JobPosting):
+def create_job(body: dict = Body(...)):
     try:
+        # Parse date string from frontend into a date object
+        body['target_date'] = date.fromisoformat(body['target_date'])
+        job = JobPosting(**body)
+        
         # 1. Create in Zoho Recruit
-        zoho_id = ZohoJobService.create_job(job.model_dump())
+        job_data = body.copy()
+        job_data['target_date'] = job.target_date.isoformat()  # string for Zoho API
+        zoho_id = ZohoJobService.create_job(job_data)
         
         # 2. Persist to PostgreSQL
         with Session(engine) as session:

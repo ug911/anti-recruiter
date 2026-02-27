@@ -1,7 +1,7 @@
 import requests
 from app.services.zoho_auth import ZohoAuthService
 
-ZOHO_API_BASE = "https://recruit.zoho.com/recruit/v2"
+ZOHO_API_BASE = "https://recruit.zoho.in/recruit/v2"
 
 class ZohoJobService:
     @staticmethod
@@ -43,7 +43,7 @@ class ZohoJobService:
                     "Job_Description": job_data.get("description"),
                     "Industry": job_data.get("industry"),
                     "Job_Type": job_data.get("job_type"),
-                    "Target_Date": job_data.get("target_date"), # Ensure ISO format YYYY-MM-DD
+                    "Target_Date": job_data.get("target_date"), # Already ISO format YYYY-MM-DD from router
                     "Job_Opening_Status": "In-progress",
                 }
             ]

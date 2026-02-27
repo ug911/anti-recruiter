@@ -22,7 +22,7 @@ def test_status_update():
     candidate_id = "846914000000558001"
     status = "Screening"
     
-    ZOHO_API_BASE = "https://recruit.zoho.com/recruit/v2"
+    ZOHO_API_BASE = "https://recruit.zoho.in/recruit/v2"
 
     print(f"\n--- Fetching Associated Candidates ---")
     url_get = f"{ZOHO_API_BASE}/Job_Openings/{job_id}/associate"
