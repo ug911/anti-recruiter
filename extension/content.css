@@ -1,0 +1,661 @@
+/* ======================================
+   Anti-Recruiter Floating Widget
+   All styles are scoped to #ar-widget-*
+   to avoid conflicts with host pages
+   ====================================== */
+
+#ar-widget-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c5cfc, #6b4ce0);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(124, 92, 252, 0.4);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+#ar-widget-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(124, 92, 252, 0.6);
+}
+
+#ar-widget-fab.ar-open {
+  transform: rotate(45deg) scale(1);
+}
+
+#ar-widget-fab.ar-open:hover {
+  transform: rotate(45deg) scale(1.1);
+}
+
+/* Chat Container */
+#ar-widget-chat {
+  position: fixed;
+  bottom: 92px;
+  right: 24px;
+  width: 380px;
+  height: 520px;
+  border-radius: 16px;
+  overflow: hidden;
+  z-index: 2147483646;
+  display: none;
+  flex-direction: column;
+  background: #0f0f14;
+  color: #e4e4ec;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(124, 92, 252, 0.15);
+  animation: ar-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#ar-widget-chat.ar-visible {
+  display: flex;
+}
+
+@keyframes ar-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Reset all inside the widget */
+#ar-widget-chat * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* Screens */
+#ar-widget-chat .ar-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Home Screen */
+#ar-widget-chat .ar-home-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  gap: 28px;
+}
+
+#ar-widget-chat .ar-home-greeting {
+  text-align: center;
+}
+
+#ar-widget-chat .ar-home-wave {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 8px;
+  animation: ar-wave 1.5s ease-in-out;
+}
+
+@keyframes ar-wave {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  15% {
+    transform: rotate(14deg);
+  }
+
+  30% {
+    transform: rotate(-8deg);
+  }
+
+  45% {
+    transform: rotate(14deg);
+  }
+
+  60% {
+    transform: rotate(-4deg);
+  }
+
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+#ar-widget-chat .ar-home-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #e4e4ec;
+  letter-spacing: -0.3px;
+}
+
+#ar-widget-chat .ar-home-desc {
+  font-size: 13px;
+  color: #5c5c72;
+  margin-top: 4px;
+}
+
+#ar-widget-chat .ar-home-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+#ar-widget-chat .ar-option-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: #16161e;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  color: #e4e4ec;
+  transition: all 0.2s ease;
+  width: 100%;
+  font-family: inherit;
+}
+
+#ar-widget-chat .ar-option-card:hover {
+  background: #1e1e2a;
+  border-color: #7c5cfc;
+  box-shadow: 0 0 20px rgba(124, 92, 252, 0.12);
+  transform: translateY(-1px);
+}
+
+#ar-widget-chat .ar-option-icon {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 92, 252, 0.1);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+#ar-widget-chat .ar-option-label {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  white-space: nowrap;
+}
+
+#ar-widget-chat .ar-option-hint {
+  font-size: 11px;
+  color: #5c5c72;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Back Button */
+#ar-widget-chat .ar-back-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: #1e1e2a;
+  color: #8b8ba0;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+#ar-widget-chat .ar-back-btn:hover {
+  background: #252535;
+  color: #e4e4ec;
+}
+
+/* Header */
+#ar-widget-chat .ar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #16161e;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+#ar-widget-chat .ar-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#ar-widget-chat .ar-logo {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(124, 92, 252, 0.2);
+  border-radius: 8px;
+}
+
+#ar-widget-chat .ar-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e4e4ec;
+  letter-spacing: -0.3px;
+}
+
+#ar-widget-chat .ar-subtitle {
+  font-size: 11px;
+  color: #5c5c72;
+  font-weight: 500;
+}
+
+#ar-widget-chat .ar-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: ar-pulse 2s ease-in-out infinite;
+}
+
+#ar-widget-chat .ar-status-dot.ar-disconnected {
+  background: #f87171;
+  box-shadow: 0 0 8px #f87171;
+}
+
+#ar-widget-chat .ar-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#ar-widget-chat .ar-dashboard-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b8ba0;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #1e1e2a;
+  border: 1px solid #2a2a3a;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+#ar-widget-chat .ar-dashboard-btn:hover {
+  color: #e4e4ec;
+  background: #252535;
+  border-color: #7c5cfc;
+}
+
+@keyframes ar-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Chat Messages */
+#ar-widget-chat .ar-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a3a transparent;
+}
+
+#ar-widget-chat .ar-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+#ar-widget-chat .ar-messages::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 4px;
+}
+
+#ar-widget-chat .ar-msg {
+  display: flex;
+  gap: 8px;
+  max-width: 92%;
+  animation: ar-fade-in 0.3s ease;
+}
+
+@keyframes ar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#ar-widget-chat .ar-msg-user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+#ar-widget-chat .ar-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  background: #1e1e2a;
+}
+
+#ar-widget-chat .ar-msg-user .ar-avatar {
+  background: rgba(124, 92, 252, 0.2);
+}
+
+#ar-widget-chat .ar-bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+#ar-widget-chat .ar-msg-bot .ar-bubble {
+  background: #1e1e2a;
+  border: 1px solid #2a2a3a;
+  border-top-left-radius: 4px;
+  color: #e4e4ec;
+}
+
+#ar-widget-chat .ar-msg-user .ar-bubble {
+  background: #7c5cfc;
+  color: white;
+  border-top-right-radius: 4px;
+}
+
+#ar-widget-chat .ar-bubble p {
+  margin-bottom: 6px;
+}
+
+#ar-widget-chat .ar-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+#ar-widget-chat .ar-hint {
+  font-size: 12px;
+  color: #5c5c72;
+  margin-top: 4px;
+}
+
+#ar-widget-chat .ar-hint em {
+  color: #8b8ba0;
+}
+
+/* Job Preview Card */
+#ar-widget-chat .ar-job-card {
+  background: #16161e;
+  border: 1px solid #33334a;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 8px;
+}
+
+#ar-widget-chat .ar-job-card-header {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #7c5cfc;
+}
+
+#ar-widget-chat .ar-job-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-bottom: 1px solid #2a2a3a;
+  font-size: 12px;
+}
+
+#ar-widget-chat .ar-job-field:last-of-type {
+  border-bottom: none;
+}
+
+#ar-widget-chat .ar-field-label {
+  color: #5c5c72;
+  font-weight: 500;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+#ar-widget-chat .ar-field-value {
+  color: #e4e4ec;
+  text-align: right;
+  word-break: break-word;
+}
+
+#ar-widget-chat .ar-desc-preview {
+  font-size: 12px;
+  color: #8b8ba0;
+  line-height: 1.4;
+  margin-top: 8px;
+  padding: 8px;
+  background: #0f0f14;
+  border-radius: 8px;
+  max-height: 70px;
+  overflow-y: auto;
+}
+
+#ar-widget-chat .ar-job-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#ar-widget-chat .ar-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#ar-widget-chat .ar-btn-primary {
+  background: #7c5cfc;
+  color: white;
+}
+
+#ar-widget-chat .ar-btn-primary:hover {
+  background: #6b4ce0;
+  box-shadow: 0 0 16px rgba(124, 92, 252, 0.3);
+}
+
+#ar-widget-chat .ar-btn-secondary {
+  background: #1e1e2a;
+  color: #8b8ba0;
+  border: 1px solid #2a2a3a;
+}
+
+#ar-widget-chat .ar-btn-secondary:hover {
+  background: #252535;
+  color: #e4e4ec;
+}
+
+#ar-widget-chat .ar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status Messages */
+#ar-widget-chat .ar-status-msg {
+  text-align: center;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  animation: ar-fade-in 0.3s ease;
+}
+
+#ar-widget-chat .ar-status-success {
+  background: rgba(52, 211, 153, 0.1);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+#ar-widget-chat .ar-status-error {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+/* Typing Indicator */
+#ar-widget-chat .ar-typing {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  animation: ar-fade-in 0.3s ease;
+}
+
+#ar-widget-chat .ar-typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  background: #1e1e2a;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  border-top-left-radius: 4px;
+}
+
+#ar-widget-chat .ar-typing-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #5c5c72;
+  animation: ar-bounce 1.4s ease-in-out infinite;
+}
+
+#ar-widget-chat .ar-typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+#ar-widget-chat .ar-typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes ar-bounce {
+
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Input Area */
+#ar-widget-chat .ar-input-area {
+  padding: 12px;
+  background: #16161e;
+  border-top: 1px solid #2a2a3a;
+}
+
+#ar-widget-chat .ar-input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background: #1e1e2a;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  padding: 4px 4px 4px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#ar-widget-chat .ar-input-wrapper:focus-within {
+  border-color: #7c5cfc;
+  box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.2);
+}
+
+#ar-widget-chat .ar-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #e4e4ec;
+  font-size: 13px;
+  resize: none;
+  outline: none;
+  padding: 8px 0;
+  max-height: 72px;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+#ar-widget-chat .ar-input::placeholder {
+  color: #5c5c72;
+}
+
+#ar-widget-chat .ar-send-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #7c5cfc;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+#ar-widget-chat .ar-send-btn:hover {
+  background: #6b4ce0;
+  transform: scale(1.05);
+}
+
+#ar-widget-chat .ar-send-btn:active {
+  transform: scale(0.95);
+}
+
+#ar-widget-chat .ar-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+#ar-widget-chat .ar-send-btn svg {
+  width: 16px;
+  height: 16px;
+}
