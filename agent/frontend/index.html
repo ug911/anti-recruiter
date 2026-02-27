@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zoho Recruit Agent</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 760px;
+            height: 92vh;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.10);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 16px 20px;
+            background: #fff;
+            border-bottom: 1px solid #ebebeb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-header .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e8f0fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .chat-header h1 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .chat-header p {
+            font-size: 12px;
+            color: #888;
+            margin-top: 1px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-left: auto;
+        }
+
+        /* Messages */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 20px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        .msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .msg.agent {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .msg.user .bubble {
+            background: #1d4ed8;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg.agent .bubble {
+            background: #f1f1f1;
+            color: #1a1a1a;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Markdown table */
+        .bubble table {
+            border-collapse: collapse;
+            font-size: 13px;
+            width: 100%;
+            margin-top: 6px;
+        }
+
+        .bubble th {
+            background: #e5e7eb;
+            padding: 6px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .bubble td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .bubble tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Tool call pill */
+        .tool-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #6b7280;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 3px 10px;
+            margin-bottom: 4px;
+        }
+
+        .tool-pill .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #f59e0b;
+        }
+
+        .tool-pill.done .dot {
+            background: #22c55e;
+        }
+
+        /* Typing indicator */
+        .typing {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 10px 14px;
+        }
+
+        .typing span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #bbb;
+            animation: bounce 1.2s infinite;
+        }
+
+        .typing span:nth-child(2) {
+            animation-delay: .2s;
+        }
+
+        .typing span:nth-child(3) {
+            animation-delay: .4s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-6px);
+            }
+        }
+
+        /* Input area */
+        .input-area {
+            padding: 12px 16px;
+            border-top: 1px solid #ebebeb;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            background: #fff;
+        }
+
+        textarea {
+            flex: 1;
+            resize: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            line-height: 1.5;
+            max-height: 140px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        textarea:focus {
+            border-color: #1d4ed8;
+        }
+
+        textarea::placeholder {
+            color: #aaa;
+        }
+
+        button#send {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border: none;
+            border-radius: 10px;
+            background: #1d4ed8;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, transform .1s;
+        }
+
+        button#send:hover:not(:disabled) {
+            background: #1e40af;
+        }
+
+        button#send:active {
+            transform: scale(.95);
+        }
+
+        button#send:disabled {
+            background: #c7d2fe;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="avatar">🤖</div>
+            <div>
+                <h1>Recruit Agent</h1>
+                <p>Powered by Claude + Zoho Recruit</p>
+            </div>
+            <div class="status-dot" title="Online"></div>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="msg agent">
+                <div class="bubble">Hi! I'm your Zoho Recruit assistant. Ask me about job openings, candidates, or
+                    anything else in your Recruit account.</div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <textarea id="input" rows="1" placeholder="Ask about jobs, candidates…" maxlength="4000"></textarea>
+            <button id="send" title="Send">&#9658;</button>
+        </div>
+    </div>
+
+    <script>
+        const API = '/chat/stream';
+        const messagesEl = document.getElementById('messages');
+        const inputEl = document.getElementById('input');
+        const sendBtn = document.getElementById('send');
+
+        // Conversation history sent to backend
+        const history = [];
+
+        // Auto-resize textarea
+        inputEl.addEventListener('input', () => {
+            inputEl.style.height = 'auto';
+            inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+        });
+
+        // Send on Enter (Shift+Enter = newline)
+        inputEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+        });
+
+        sendBtn.addEventListener('click', send);
+
+        function scrollBottom() {
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function appendMsg(role, html, asHTML = false) {
+            const wrap = document.createElement('div');
+            wrap.className = `msg ${role}`;
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            if (asHTML) bubble.innerHTML = html;
+            else bubble.textContent = html;
+            wrap.appendChild(bubble);
+            messagesEl.appendChild(wrap);
+            scrollBottom();
+            return bubble;
+        }
+
+        function addToolPill(name, done = false) {
+            const pill = document.createElement('div');
+            pill.className = `tool-pill${done ? ' done' : ''}`;
+            pill.innerHTML = `<span class="dot"></span> ${done ? '✓' : '⟳'} ${name}`;
+            const wrap = document.createElement('div');
+            wrap.className = 'msg agent';
+            wrap.appendChild(pill);
+            messagesEl.appendChild(wrap);
+            scrollBottom();
+            return pill;
+        }
+
+        function showTyping() {
+            const wrap = document.createElement('div');
+            wrap.className = 'msg agent';
+            wrap.id = 'typing-indicator';
+            wrap.innerHTML = '<div class="bubble typing"><span></span><span></span><span></span></div>';
+            messagesEl.appendChild(wrap);
+            scrollBottom();
+        }
+        function hideTyping() {
+            document.getElementById('typing-indicator')?.remove();
+        }
+
+        // Very minimal markdown→html: bold, tables
+        function renderMarkdown(text) {
+            // Escape HTML first
+            let s = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // Bold
+            s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Detect pipe tables
+            const lines = s.split('\n');
+            let out = '', inTable = false;
+            for (let i = 0; i < lines.length; i++) {
+                const l = lines[i].trim();
+                if (l.startsWith('|')) {
+                    if (!inTable) { out += '<table>'; inTable = true; }
+                    // separator row?
+                    if (/^\|[-| :]+\|$/.test(l)) continue;
+                    const cells = l.replace(/^\||\|$/g, '').split('|');
+                    const tag = (i === 0 || lines[i - 1]?.trim().startsWith('|---') === false &&
+                        lines[i + 1]?.trim().match(/^\|[-| :]+\|$/)) ? 'th' : 'td';
+                    out += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+                } else {
+                    if (inTable) { out += '</table>'; inTable = false; }
+                    out += l + '\n';
+                }
+            }
+            if (inTable) out += '</table>';
+            return out.trim();
+        }
+
+        async function send() {
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            // Add user message to UI + history
+            appendMsg('user', text);
+            history.push({ role: 'user', content: text });
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+            sendBtn.disabled = true;
+            showTyping();
+
+            let agentBubble = null;
+            let agentText = '';
+            const activePills = {};
+
+            try {
+                const resp = await fetch(API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: history }),
+                });
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // keep partial line
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        let event;
+                        try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+                        if (event.type === 'tool_call') {
+                            hideTyping();
+                            const pill = addToolPill(event.name, false);
+                            activePills[event.name] = pill;
+                        }
+
+                        if (event.type === 'tool_result') {
+                            const pill = activePills[event.name];
+                            if (pill) {
+                                pill.className = 'tool-pill done';
+                                pill.innerHTML = `<span class="dot"></span> ✓ ${event.name}`;
+                            }
+                        }
+
+                        if (event.type === 'text') {
+                            hideTyping();
+                            agentText += event.content;
+                            if (!agentBubble) {
+                                agentBubble = appendMsg('agent', '', true);
+                            }
+                            agentBubble.innerHTML = renderMarkdown(agentText);
+                            scrollBottom();
+                        }
+
+                        if (event.type === 'error') {
+                            hideTyping();
+                            appendMsg('agent', '⚠️ Error: ' + event.message);
+                        }
+                    }
+                }
+
+                // Save assistant reply to history
+                if (agentText) {
+                    history.push({ role: 'assistant', content: agentText });
+                }
+
+            } catch (err) {
+                hideTyping();
+                appendMsg('agent', '⚠️ Could not reach the backend. Is `python main.py` running?');
+                console.error(err);
+            } finally {
+                sendBtn.disabled = false;
+                inputEl.focus();
+            }
+        }
+    </script>
+</body>
+
+</html>

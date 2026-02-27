@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+anthropic
+mcp[cli]
+python-dotenv
+requests
+sse-starlette
+pydantic

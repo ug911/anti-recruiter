@@ -2,8 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
 venv/
+agent/venv/
 .env
+.env.*
+!.env.example
 .venv
 env/
 instance/
