@@ -6,3 +6,4 @@ python-dotenv
 requests
 sse-starlette
 pydantic
+langfuse

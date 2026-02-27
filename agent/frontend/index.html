@@ -309,6 +309,9 @@
 
     <script>
         const API = '/chat/stream';
+        const SESSION_ID = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : 'session-' + Math.random().toString(36).substring(2, 15);
         const messagesEl = document.getElementById('messages');
         const inputEl = document.getElementById('input');
         const sendBtn = document.getElementById('send');
@@ -418,7 +421,7 @@
                 const resp = await fetch(API, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: history }),
+                    body: JSON.stringify({ messages: history, session_id: SESSION_ID }),
                 });
 
                 const reader = resp.body.getReader();
