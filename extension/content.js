@@ -156,11 +156,13 @@
       chat.classList.add("ar-visible");
       fab.classList.add("ar-open");
       fab.innerHTML = "✕";
-      setTimeout(() => document.getElementById("ar-input").focus(), 100);
+      document.body.classList.add("ar-sidebar-open");
+      setTimeout(() => document.getElementById("ar-input").focus(), 300);
     } else {
       chat.classList.remove("ar-visible");
       fab.classList.remove("ar-open");
       fab.innerHTML = "🚀";
+      document.body.classList.remove("ar-sidebar-open");
     }
   }
 
