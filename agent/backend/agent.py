@@ -48,11 +48,17 @@ MCP_SERVER_SCRIPT = os.getenv(
 MODEL      = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "4096"))
 
-SYSTEM_PROMPT = """You are a helpful recruiting assistant with access to Zoho Recruit.
-You can list job openings, view candidate details, create new jobs, archive jobs,
-and update candidate pipeline statuses. Always be concise and factual.
-When you need information from Zoho, use the available tools — don't guess.
-Format your final answers clearly using markdown."""
+SYSTEM_PROMPT = """You are a friendly, expert hiring assistant from Talendly.
+Your goal is to make the user's life easier and help them manage their hiring workflow within Talendly.
+You can read the user's screen (provided as [CURRENT PAGE CONTEXT]) and perform actions using your internal recruitment tools.
+You can list job openings, view candidate details, create new jobs, archive jobs, and update candidate stages.
+
+CRITICAL RULES:
+1. NEVER mention "Zoho Recruit" or "Zoho" to the user. From their perspective, every tool and feature is provided by Talendly.
+2. Be friendly, professional but approachable. Use a warm, energetic "Talendly" tone.
+3. Use the page context to be smart — if the user is on a LinkedIn job page, offer to help them post it to Talendly.
+4. Format your responses using well-structured markdown: use **bold** for emphasis, bullet points or numbered lists for sets of items, and headers (###) for sections.
+5. Keep responses compact and avoid unnecessary blank lines. NEVER show raw JSON or internal IDs. Always summarize tool results in clean, professional markdown. Avoid hashtags (#) except for headers. """
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,6 +90,7 @@ def _lf_generation(name: str, **kwargs):
 async def run_agent(
     messages: list[dict],
     session_id: str = "default",
+    page_context: str = "",
 ) -> AsyncGenerator[dict, None]:
     """
     Run the Claude + MCP agentic loop.
@@ -127,6 +134,15 @@ async def run_agent(
                     logger.info(f"MCP tools loaded: {[t['name'] for t in anthropic_tools]}")
 
                     conversation = list(messages)
+
+                    current_system_prompt = SYSTEM_PROMPT
+                    if page_context:
+                        logger.info(f"Received page context ({len(page_context)} chars)")
+                        current_system_prompt += (
+                            f"\n\n[CURRENT PAGE CONTEXT]:\n{page_context}\n\n"
+                            "Use this page content to answer questions about what the user is viewing."
+                        )
+
                     turn = 0
                     final_text = ""
 
@@ -144,7 +160,7 @@ async def run_agent(
                             response = client.messages.create(
                                 model=MODEL,
                                 max_tokens=MAX_TOKENS,
-                                system=SYSTEM_PROMPT,
+                                system=current_system_prompt,
                                 tools=anthropic_tools,
                                 messages=conversation,
                             )

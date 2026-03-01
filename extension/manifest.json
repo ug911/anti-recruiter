@@ -1,23 +1,59 @@
 {
   "manifest_version": 3,
-  "name": "Anti-Recruiter Job Poster",
+  "name": "Talendly Hiring Assistant",
   "version": "1.0.0",
-  "description": "AI-powered chatbot to post jobs to Zoho Recruit using natural language",
+  "description": "Talendly's expert AI assistant to help you post and manage jobs instantly.",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
   },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "logo.png",
+      "48": "logo.png",
+      "128": "logo.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content.css",
+        "logo.png",
+        "marked.min.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
-  "permissions": [],
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting"
+  ],
   "host_permissions": [
-    "http://localhost:8000/*"
-  ]
+    "http://localhost:8000/*",
+    "*://*.linkedin.com/*",
+    "*://*.indeed.com/*",
+    "*://*.glassdoor.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

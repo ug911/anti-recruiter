@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Anti-Recruiter</title>
+  <title>Talendly Assistant</title>
   <link rel="stylesheet" href="popup.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
   <div class="app">
     <!-- Header -->
     <header class="header">
       <div class="header-left">
-        <div class="logo">🚀</div>
+        <div class="logo">
+          <img src="logo.png" alt="Talendly Logo" width="28">
+        </div>
         <div>
-          <h1>Anti-Recruiter</h1>
-          <span class="subtitle">AI Job Poster</span>
+          <h1>Talendly</h1>
+          <span class="subtitle">AI Hiring Assistant</span>
         </div>
       </div>
       <div class="status-dot" id="statusDot" title="Backend connected"></div>
@@ -24,10 +28,12 @@
     <!-- Chat Area -->
     <div class="chat-area" id="chatArea">
       <div class="message bot-message">
-        <div class="message-avatar">🤖</div>
+        <div class="message-avatar">
+          <img src="logo.png" alt="T" width="18">
+        </div>
         <div class="message-content">
-          <p>Hey! I can help you post a job to Zoho Recruit. Just describe the role you want to post.</p>
-          <p class="hint">Try: <em>"Post a Senior React Dev in Bangalore, 5-8 yrs, 25-35 LPA"</em></p>
+          <p>Wassup! I'm your Talendly assistant. Ready to help you find the best talent.</p>
+          <p class="hint">Try: <em>"Post a Senior React Dev in Bangalore"</em></p>
         </div>
       </div>
     </div>
@@ -35,14 +41,10 @@
     <!-- Input Area -->
     <div class="input-area">
       <div class="input-wrapper">
-        <textarea 
-          id="messageInput" 
-          placeholder="Describe the job you want to post..." 
-          rows="1"
-          autofocus
-        ></textarea>
+        <textarea id="messageInput" placeholder="Describe the job you want to post..." rows="1" autofocus></textarea>
         <button id="sendBtn" class="send-btn" title="Send">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"></line>
             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
           </svg>
@@ -52,4 +54,5 @@
   </div>
   <script src="popup.js"></script>
 </body>
+
 </html>

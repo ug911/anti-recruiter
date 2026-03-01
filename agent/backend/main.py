@@ -73,6 +73,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     session_id: Optional[str] = "default"
+    page_context: Optional[str] = ""
 
 
 class ChatResponse(BaseModel):
@@ -109,7 +110,7 @@ async def chat(req: ChatRequest):
     tool_calls = []
 
     try:
-        async for event in run_agent(messages, session_id=req.session_id):
+        async for event in run_agent(messages, session_id=req.session_id, page_context=req.page_context):
             if event["type"] == "text":
                 final_text += event["content"]
             elif event["type"] == "tool_call":
@@ -148,7 +149,7 @@ async def chat_stream(req: ChatRequest):
 
     async def event_generator():
         try:
-            async for event in run_agent(messages, session_id=req.session_id):
+            async for event in run_agent(messages, session_id=req.session_id, page_context=req.page_context):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as exc:
             logger.exception("Stream error")

@@ -12,6 +12,7 @@ import sys
 import os
 import json
 import requests
+import base64
 from pathlib import Path
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
@@ -97,7 +98,7 @@ def list_jobs() -> str:
     params = {
         "fields": "id,Posting_Title,City,Job_Opening_Status,Salary,Industry,Job_Type,Target_Date,Job_Description,Client_Name"
     }
-    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/JobOpenings", params=params)
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Job_Openings", params=params)
 
     if resp.status_code == 204:
         return json.dumps([])
@@ -130,7 +131,7 @@ def get_job(job_id: str) -> str:
     Args:
         job_id: The Zoho record ID of the job opening.
     """
-    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/JobOpenings/{job_id}")
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Job_Openings/{job_id}")
     if resp.status_code != 200:
         return json.dumps({"error": f"Zoho API error {resp.status_code}: {resp.text}"})
     data = resp.json().get("data")
@@ -177,7 +178,7 @@ def create_job(
             "Job_Opening_Status":  "In-progress",
         }]
     }
-    resp = _zoho_request("POST", f"{ZOHO_API_BASE}/JobOpenings", json=payload)
+    resp = _zoho_request("POST", f"{ZOHO_API_BASE}/Job_Openings", json=payload)
     if resp.status_code not in (200, 201):
         return json.dumps({"error": f"Create failed {resp.status_code}: {resp.text}"})
 
@@ -189,6 +190,147 @@ def create_job(
 
 
 @mcp.tool()
+def create_candidate(
+    first_name: str,
+    last_name: str,
+    email: str,
+    phone: str = "",
+    mobile: str = "",
+    title: str = "",
+    skills: str = "",
+    experience: str = "",
+) -> str:
+    """
+    Create a new candidate in Zoho Recruit.
+
+    Args:
+        first_name:  Candidate's first name.
+        last_name:   Candidate's last name.
+        email:       Candidate's email address.
+        phone:       Office or home phone.
+        mobile:      Mobile phone number.
+        title:       Current job title.
+        skills:      Comma-separated skills (e.g. "Python, SQL, AWS").
+        experience:  Years of experience (as a string or number).
+    """
+    payload = {
+        "data": [{
+            "First_Name":        first_name,
+            "Last_Name":         last_name,
+            "Email":             email,
+            "Phone":             phone,
+            "Mobile":            mobile,
+            "Current_Job_Title": title,
+            "Skill_Set":         skills,
+            "Experience_in_Years": experience,
+            "Candidate_Status":   "New",
+        }]
+    }
+    resp = _zoho_request("POST", f"{ZOHO_API_BASE}/Candidates", json=payload)
+    if resp.status_code not in (200, 201):
+        return json.dumps({"error": f"Create failed {resp.status_code}: {resp.text}"})
+
+    data = resp.json().get("data", [])
+    if data and data[0].get("status") == "success":
+        record_id = data[0]["details"]["id"]
+        return json.dumps({"success": True, "candidate_id": record_id, "message": f"Candidate {first_name} {last_name} created with ID {record_id}"})
+    return json.dumps({"error": "Unexpected Zoho response", "raw": resp.json()})
+
+
+@mcp.tool()
+def search_candidates(query: str, type: str = "word") -> str:
+    """
+    Search for candidates in Zoho Recruit.
+
+    Args:
+        query: The search term (e.g. "Python", "candidate@email.com").
+        type:  The search type: "word" (full text), "email" (exact), "phone" (exact), or "criteria".
+               For "criteria", use format: (Email:equals:test@test.com).
+    """
+    params = {}
+    if type == "criteria":
+        params["criteria"] = query
+    else:
+        params[type] = query
+
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Candidates/search", params=params)
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Search failed {resp.status_code}: {resp.text}"})
+
+    candidates = []
+    for item in resp.json().get("data", []):
+        candidates.append({
+            "id":           item.get("id"),
+            "first_name":   item.get("First_Name"),
+            "last_name":    item.get("Last_Name"),
+            "email":        item.get("Email"),
+            "stage":        item.get("Candidate_Stage"),
+            "title":        item.get("Current_Job_Title"),
+            "skills":       item.get("Skill_Set"),
+        })
+    return json.dumps(candidates, indent=2)
+
+
+@mcp.tool()
+def search_jobs(query: str, type: str = "word") -> str:
+    """
+    Search for job openings in Zoho Recruit.
+
+    Args:
+        query: The search term (e.g. "Developer", "Bangalore").
+        type:  The search type: "word" (full text) or "criteria".
+    """
+    params = {}
+    if type == "criteria":
+        params["criteria"] = query
+    else:
+        params[type] = query
+
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Job_Openings/search", params=params)
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Search failed {resp.status_code}: {resp.text}"})
+
+    jobs = []
+    for item in resp.json().get("data", []):
+        jobs.append({
+            "id":          item.get("id"),
+            "title":       item.get("Posting_Title"),
+            "location":    item.get("City"),
+            "status":      item.get("Job_Opening_Status"),
+            "industry":    item.get("Industry"),
+        })
+    return json.dumps(jobs, indent=2)
+
+
+@mcp.tool()
+def associate_candidate(job_id: str, candidate_id: str, comments: str = "") -> str:
+    """
+    Associate (link) a candidate to a specific job opening's pipeline.
+
+    Args:
+        job_id:       The Zoho record ID of the job opening.
+        candidate_id: The Zoho record ID of the candidate.
+        comments:     Optional internal comments for the association.
+    """
+    payload = {
+        "data": [{
+            "jobids": [job_id],
+            "ids": [candidate_id],
+            "comments": comments
+        }]
+    }
+    resp = _zoho_request("PUT", f"{ZOHO_API_BASE}/Candidates/actions/associate", json=payload)
+    if resp.status_code not in (200, 201, 202):
+        return json.dumps({"error": f"Association failed {resp.status_code}: {resp.text}"})
+
+    return json.dumps(resp.json(), indent=2)
+
+
+@mcp.tool()
 def archive_job(job_id: str) -> str:
     """
     Archive (cancel) a job opening in Zoho Recruit.
@@ -197,7 +339,7 @@ def archive_job(job_id: str) -> str:
         job_id: The Zoho record ID of the job to archive.
     """
     payload = {"data": [{"Job_Opening_Status": "Cancelled"}]}
-    resp = _zoho_request("PUT", f"{ZOHO_API_BASE}/JobOpenings/{job_id}", json=payload)
+    resp = _zoho_request("PUT", f"{ZOHO_API_BASE}/Job_Openings/{job_id}", json=payload)
     if resp.status_code != 200:
         return json.dumps({"error": f"Archive failed {resp.status_code}: {resp.text}"})
     data = resp.json().get("data", [])
@@ -307,28 +449,304 @@ def list_all_candidates(page: int = 1) -> str:
 @mcp.tool()
 def update_candidate_status(job_id: str, candidate_id: str, status: str) -> str:
     """
-    Update the pipeline stage / application status for a candidate associated with a job.
+    Update the hiring pipeline stage / application status for a candidate associated with a job.
 
     Args:
         job_id:       The Zoho record ID of the job opening.
         candidate_id: The Zoho record ID of the candidate.
         status:       New status string (e.g. "Interview Scheduled", "Hired", "Rejected").
     """
-    # Update candidate record
-    payload = {"data": [{"Application_Status": status, "Candidate_Stage": status}]}
-    resp1 = _zoho_request("PUT", f"{ZOHO_API_BASE}/Candidates/{candidate_id}", json=payload)
+    # Use the dedicated Candidate status endpoint for context-aware pipeline updates
+    payload = {
+        "data": [{
+            "ids": [candidate_id],
+            "jobids": [job_id],
+            "Candidate_Status": status
+        }]
+    }
+    resp = _zoho_request("PUT", f"{ZOHO_API_BASE}/Candidates/status", json=payload)
 
-    # Update association record
-    payload_a = {"data": [{"id": candidate_id, "Status": status}]}
-    resp2 = _zoho_request("PUT", f"{ZOHO_API_BASE}/Job_Openings/{job_id}/associate", json=payload_a)
-
-    if resp2.status_code == 200:
-        return json.dumps({"success": True, "message": f"Candidate {candidate_id} status updated to '{status}'"})
+    if resp.status_code in (200, 201, 202):
+        return json.dumps({"success": True, "message": f"Candidate {candidate_id} status updated to '{status}' for Job {job_id}"})
+    
     return json.dumps({
-        "error": "Status update may have partially failed",
-        "candidate_update": resp1.status_code,
-        "association_update": resp2.status_code,
+        "error": f"Status update failed {resp.status_code}: {resp.text}"
     })
+
+
+@mcp.tool()
+def add_note(module: str, record_id: str, content: str) -> str:
+    """
+    Add an internal note to a record in Zoho Recruit.
+
+    Args:
+        module:    The API name of the module (e.g. "Candidates", "Job_Openings").
+        record_id: The Zoho record ID to attach the note to.
+        content:   The text content of the note.
+    """
+    payload = {
+        "data": [{
+            "Parent_Id": record_id,
+            "se_module": module,
+            "Note_Content": content
+        }]
+    }
+    resp = _zoho_request("POST", f"{ZOHO_API_BASE}/Notes", json=payload)
+    if resp.status_code not in (200, 201):
+        return json.dumps({"error": f"Failed to add note {resp.status_code}: {resp.text}"})
+
+    return json.dumps({"success": True, "message": "Note added successfully"})
+
+
+@mcp.tool()
+def list_notes(module: str, record_id: str) -> str:
+    """
+    List all internal notes associated with a specific record.
+
+    Args:
+        module:    The API name of the module (e.g. "Candidates", "Job_Openings").
+        record_id: The Zoho record ID.
+    """
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/{module}/{record_id}/Notes")
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to list notes {resp.status_code}: {resp.text}"})
+
+    notes = []
+    for item in resp.json().get("data", []):
+        notes.append({
+            "id":           item.get("id"),
+            "content":      item.get("Note_Content"),
+            "owner":        item.get("Owner", {}).get("name"),
+            "created_time": item.get("Created_Time"),
+        })
+    return json.dumps(notes, indent=2)
+
+
+@mcp.tool()
+def list_interviews(page: int = 1) -> str:
+    """
+    List scheduled interviews in Zoho Recruit.
+    """
+    params = {"page": page, "per_page": 50}
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Interviews", params=params)
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to list interviews {resp.status_code}: {resp.text}"})
+
+    interviews = []
+    for item in resp.json().get("data", []):
+        interviews.append({
+            "id":             item.get("id"),
+            "name":           item.get("Interview_Name"),
+            "candidate":      item.get("Candidate_Name", {}).get("name"),
+            "job":            item.get("Job_Opening_Name", {}).get("name"),
+            "interviewers":   [i.get("name") for i in item.get("Interviewers", [])],
+            "from_time":      item.get("From"),
+            "to_time":        item.get("To"),
+            "location":       item.get("Location"),
+        })
+    return json.dumps(interviews, indent=2)
+
+
+@mcp.tool()
+def get_interview(interview_id: str) -> str:
+    """
+    Get full details of a specific interview.
+    """
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Interviews/{interview_id}")
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to get interview {resp.status_code}: {resp.text}"})
+    data = resp.json().get("data")
+    return json.dumps(data[0] if data else {}, indent=2)
+
+
+@mcp.tool()
+def list_clients(page: int = 1) -> str:
+    """
+    List client organizations in Zoho Recruit.
+    """
+    params = {"page": page, "per_page": 50}
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Clients", params=params)
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to list clients {resp.status_code}: {resp.text}"})
+
+    clients = []
+    for item in resp.json().get("data", []):
+        clients.append({
+            "id":           item.get("id"),
+            "name":         item.get("Client_Name"),
+            "industry":     item.get("Industry"),
+            "website":      item.get("Website"),
+            "status":       item.get("Client_Status"),
+        })
+    return json.dumps(clients, indent=2)
+
+
+@mcp.tool()
+def get_client(client_id: str) -> str:
+    """
+    Get full details of a specific client organization.
+    """
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Clients/{client_id}")
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to get client {resp.status_code}: {resp.text}"})
+    data = resp.json().get("data")
+    return json.dumps(data[0] if data else {}, indent=2)
+
+
+@mcp.tool()
+def list_contacts(page: int = 1) -> str:
+    """
+    List client contacts in Zoho Recruit.
+    """
+    params = {"page": page, "per_page": 50}
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/Contacts", params=params)
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to list contacts {resp.status_code}: {resp.text}"})
+
+    contacts = []
+    for item in resp.json().get("data", []):
+        contacts.append({
+            "id":         item.get("id"),
+            "full_name":  item.get("Full_Name"),
+            "email":      item.get("Email"),
+            "phone":      item.get("Phone") or item.get("Mobile"),
+            "client":     item.get("Client_Name", {}).get("name"),
+        })
+    return json.dumps(contacts, indent=2)
+
+
+@mcp.tool()
+def list_attachments(module: str, record_id: str) -> str:
+    """
+    List all files (resumes, etc.) attached to a specific record.
+
+    Args:
+        module:    The API name of the module (e.g. "Candidates", "Job_Openings").
+        record_id: The Zoho record ID.
+    """
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/{module}/{record_id}/Attachments")
+    if resp.status_code == 204:
+        return json.dumps([])
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to list attachments {resp.status_code}: {resp.text}"})
+
+    attachments = []
+    for item in resp.json().get("data", []):
+        attachments.append({
+            "id":        item.get("id"),
+            "file_name": item.get("File_Name"),
+            "size":      item.get("Size"),
+            "owner":     item.get("Owner", {}).get("name"),
+            "type":      item.get("$type"), # 'attachment' or 'link'
+        })
+    return json.dumps(attachments, indent=2)
+
+
+@mcp.tool()
+def list_attachment_categories(module: str = "") -> str:
+    """
+    Get the list of predefined attachment categories in Zoho Recruit.
+    Use this to find valid category labels/IDs before uploading a file.
+
+    Args:
+        module: Optional. Filter categories by module (e.g., "Candidates").
+    """
+    params = {}
+    if module:
+        params["module"] = module
+    
+    resp = _zoho_request("GET", f"{ZOHO_API_BASE}/settings/attachment_categories", params=params)
+    if resp.status_code != 200:
+        return json.dumps({"error": f"Failed to get categories {resp.status_code}: {resp.text}"})
+    
+    return json.dumps(resp.json().get("attachment_categories", []), indent=2)
+
+
+@mcp.tool()
+def upload_attachment(
+    module: str,
+    record_id: str,
+    file_path: str,
+    category_id: str,
+    category_label: str
+) -> str:
+    """
+    Upload a local file and attach it to a record in Zoho Recruit.
+
+    Args:
+        module:         The API name of the module (e.g. "Candidates", "Job_Openings").
+        record_id:      The Zoho record ID to attach the file to.
+        file_path:      The absolute path to the local file to upload.
+        category_id:    The ID of the attachment category (get via list_attachment_categories).
+        category_label: The label/name of the category.
+    """
+    if not os.path.exists(file_path):
+        return json.dumps({"error": f"File not found: {file_path}"})
+
+    params = {
+        "attachments_category_id": category_id,
+        "attachments_category": category_label
+    }
+
+    with open(file_path, "rb") as f:
+        files = {"file": f}
+        # Note: _zoho_request uses headers=_headers() which has Content-Type: application/json.
+        # For multipart, we must let requests set the boundary.
+        access_token = _get_access_token()
+        headers = {
+            "Authorization": f"Zoho-oauthtoken {access_token}"
+            # No Content-Type here; requests will add it for multipart
+        }
+        url = f"{ZOHO_API_BASE}/{module}/{record_id}/Attachments"
+        resp = requests.post(url, headers=headers, params=params, files=files, timeout=30)
+
+    if resp.status_code not in (200, 201):
+        return json.dumps({"error": f"Upload failed {resp.status_code}: {resp.text}"})
+
+    return json.dumps(resp.json(), indent=2)
+
+
+@mcp.tool()
+def import_resume(file_path: str) -> str:
+    """
+    Upload a resume file and parse it to create or update a candidate in Zoho Recruit.
+    This uses Zoho's built-in resume parser.
+
+    Args:
+        file_path: The absolute path to the candidate's resume (PDF, DOCX, etc.).
+    """
+    if not os.path.exists(file_path):
+        return json.dumps({"error": f"File not found: {file_path}"})
+
+    filename = os.path.basename(file_path)
+    with open(file_path, "rb") as f:
+        content = f.read()
+        encoded = base64.b64encode(content).decode("utf-8")
+
+    payload = {
+        "data": [
+            {
+                "filename": filename,
+                "document": encoded
+            }
+        ]
+    }
+
+    # The v2 endpoint for Candidates import_document uses 'filename' and 'document' keys.
+    resp = _zoho_request("POST", f"{ZOHO_API_BASE}/Candidates/actions/import_document", json=payload)
+    
+    if resp.status_code not in (200, 201, 202):
+        return json.dumps({"error": f"Import failed {resp.status_code}: {resp.text}"})
+
+    return json.dumps(resp.json(), indent=2)
 
 
 # ---------------------------------------------------------------------------

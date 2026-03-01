@@ -11,7 +11,7 @@
     // Floating Action Button
     const fab = document.createElement("button");
     fab.id = "ar-widget-fab";
-    fab.innerHTML = "🚀";
+    fab.innerHTML = `<img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="32">`;
     fab.addEventListener("click", toggleChat);
     document.body.appendChild(fab);
 
@@ -23,10 +23,12 @@
       <div class="ar-screen ar-screen-home" id="ar-screen-home">
         <div class="ar-header">
           <div class="ar-header-left">
-            <div class="ar-logo">🚀</div>
+            <div class="ar-logo">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
+            </div>
             <div>
-              <div class="ar-title">Anti-Recruiter</div>
-              <div class="ar-subtitle">AI Job Poster</div>
+              <div class="ar-title">Talendly</div>
+              <div class="ar-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
           <div class="ar-header-right">
@@ -37,8 +39,8 @@
         <div class="ar-home-body">
           <div class="ar-home-greeting">
             <span class="ar-home-wave">👋</span>
-            <h2 class="ar-home-title">Welcome!</h2>
-            <p class="ar-home-desc">What would you like to do today?</p>
+            <h2 class="ar-home-title">Wassup Talendly!</h2>
+            <p class="ar-home-desc">I'm your AI hiring expert. Ready to post a job?</p>
           </div>
           <div class="ar-home-options">
             <button class="ar-option-card" id="ar-opt-post">
@@ -60,10 +62,12 @@
         <div class="ar-header">
           <div class="ar-header-left">
             <button class="ar-back-btn" id="ar-back-btn" title="Back to home">←</button>
-            <div class="ar-logo">🚀</div>
+            <div class="ar-logo">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
+            </div>
             <div>
-              <div class="ar-title">Anti-Recruiter</div>
-              <div class="ar-subtitle" id="ar-chat-subtitle">AI Job Poster</div>
+              <div class="ar-title">Talendly</div>
+              <div class="ar-subtitle" id="ar-chat-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
           <div class="ar-header-right">
@@ -73,9 +77,11 @@
         </div>
         <div class="ar-messages" id="ar-messages">
           <div class="ar-msg ar-msg-bot">
-            <div class="ar-avatar">🤖</div>
+            <div class="ar-avatar">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="18">
+            </div>
             <div class="ar-bubble">
-              <p>Hey! I can help you post a job. Just describe the role you want to post.</p>
+              <p>Hey! I'm your Talendly assistant. I can help you post a job instantly.</p>
               <p class="ar-hint">Try: <em>"Post a Senior React Dev in Bangalore, 5-8 yrs, 25-35 LPA"</em></p>
             </div>
           </div>
@@ -176,85 +182,96 @@
     const text = input.value.trim();
     if (!text) return;
 
+    // Get or create session ID
+    let { session_id } = await chrome.storage.local.get("session_id");
+    if (!session_id) {
+      session_id = Math.random().toString(36).substring(7);
+      await chrome.storage.local.set({ session_id });
+    }
+
     addMessage(text, "user");
     input.value = "";
     input.style.height = "auto";
 
-    conversationHistory.push({ role: "user", text });
+    conversationHistory.push({ role: "user", content: text });
 
     const typingEl = showTyping();
+    let botMessageEl = null;
+    let botText = "";
 
-    try {
-      const response = await fetch(`${API_BASE}/chat/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: conversationHistory }),
-      });
+    // Get Page Context
+    const pageContext = getPageText();
 
-      removeTyping(typingEl);
+    // Listen for response from background
+    const messageListener = (msg) => {
+      if (msg.type === "CHAT_CHUNK") {
+        removeTyping(typingEl);
+        const data = msg.data;
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "Request failed");
+        if (data.content) {
+          botText += data.content;
+          if (!botMessageEl) {
+            botMessageEl = createEmptyBotMessage();
+          }
+          updateBotMessage(botMessageEl, botText);
+        }
+
+        if (data.job_data) {
+          pendingJobData = data.job_data;
+        }
+        scrollToBottom();
+      } else if (msg.type === "CHAT_DONE") {
+        chrome.runtime.onMessage.removeListener(messageListener);
+        if (pendingJobData) {
+          addBotMessageWithCard(botText, pendingJobData);
+          if (botMessageEl) botMessageEl.closest(".ar-msg").remove();
+        } else if (botMessageEl) {
+          botMessageEl.innerHTML = marked.parse(botText);
+        }
+        conversationHistory.push({ role: "assistant", content: botText });
+        scrollToBottom();
+      } else if (msg.type === "CHAT_ERROR") {
+        chrome.runtime.onMessage.removeListener(messageListener);
+        removeTyping(typingEl);
+        const errMsg = typeof msg.error === 'object' ? JSON.stringify(msg.error) : msg.error;
+        addStatusMessage(`Error: ${errMsg}`, "error");
+        scrollToBottom();
       }
+    };
 
-      const result = await response.json();
+    chrome.runtime.onMessage.addListener(messageListener);
 
-      if (result.type === "job_data") {
-        pendingJobData = result.data;
-        const cardText = "Here's what I extracted. Want me to post this?";
-        conversationHistory.push({ role: "model", text: cardText });
-        addBotMessageWithCard(cardText, result.data);
-      } else {
-        conversationHistory.push({ role: "model", text: result.text });
-        addMessage(result.text, "bot");
+    // Send request to background
+    chrome.runtime.sendMessage({
+      type: "CHAT_REQUEST",
+      payload: {
+        messages: conversationHistory,
+        session_id: session_id,
+        page_context: pageContext
       }
-    } catch (error) {
-      removeTyping(typingEl);
-      addStatusMessage(`Error: ${error.message}`, "error");
-    }
+    });
 
     scrollToBottom();
   }
 
-  // ---- Post Job ----
-  async function postJob(jobData) {
-    const btns = document.querySelectorAll("#ar-widget-chat .ar-job-actions .ar-btn");
-    btns.forEach((b) => (b.disabled = true));
+  function createEmptyBotMessage() {
+    const msg = document.createElement("div");
+    msg.className = "ar-msg ar-msg-bot";
+    msg.innerHTML = `
+      <div class="ar-avatar">🤖</div>
+      <div class="ar-bubble"><p></p></div>
+    `;
+    getMessages().appendChild(msg);
+    return msg.querySelector("p");
+  }
 
-    const typingEl = showTyping();
-
-    try {
-      const response = await fetch(`${API_BASE}/jobs/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(jobData),
-      });
-
-      removeTyping(typingEl);
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "Failed to post job");
-      }
-
-      const result = await response.json();
-      addStatusMessage(`✅ Job posted! Zoho ID: ${result.id}`, "success");
-
-      conversationHistory = [];
-      pendingJobData = null;
-
-      setTimeout(() => {
-        addMessage("Want to post another job? Just describe it!", "bot");
-        conversationHistory.push({ role: "model", text: "Want to post another job? Just describe it!" });
-      }, 1000);
-    } catch (error) {
-      removeTyping(typingEl);
-      addStatusMessage(`❌ ${error.message}`, "error");
-      btns.forEach((b) => (b.disabled = false));
+  function updateBotMessage(el, text) {
+    if (typeof marked !== 'undefined') {
+      el.innerHTML = marked.parse(text);
+    } else {
+      el.textContent = text;
+      el.style.whiteSpace = "pre-wrap";
     }
-
-    scrollToBottom();
   }
 
   // ---- UI Helpers ----
@@ -267,8 +284,8 @@
     msg.className = `ar-msg ${sender === "user" ? "ar-msg-user" : "ar-msg-bot"}`;
 
     msg.innerHTML = `
-      <div class="ar-avatar">${sender === "user" ? "👤" : "🤖"}</div>
-      <div class="ar-bubble"><p>${escapeHtml(text)}</p></div>
+      <div class="ar-avatar">${sender === "user" ? "👤" : `<img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="18">`}</div>
+      <div class="ar-bubble">${sender === "user" ? `<p>${escapeHtml(text)}</p>` : (typeof marked !== 'undefined' ? marked.parse(text) : `<p>${escapeHtml(text)}</p>`)}</div>
     `;
 
     getMessages().appendChild(msg);
@@ -356,6 +373,27 @@
     div.textContent = str;
     return div.innerHTML;
   }
+
+  function getPageText() {
+    // Direct innerText on the body is more reliable for scraping actual visible text.
+    try {
+      const text = document.body.innerText || "";
+      const cleaned = text.replace(/\s+/g, " ").trim().substring(0, 15000);
+      console.log(`[Anti-Recruiter] Scraping body. Result length: ${cleaned.length}`);
+      return cleaned;
+    } catch (e) {
+      console.error("[Anti-Recruiter] Scraping failed:", e);
+      return "";
+    }
+  }
+
+  // Listen for messages from popup or agent triggers
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === "GET_PAGE_CONTEXT") {
+      sendResponse({ text: getPageText() });
+    }
+    return true;
+  });
 
   // ---- Initialize ----
   if (document.readyState === "loading") {

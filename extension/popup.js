@@ -1,5 +1,54 @@
 const API_BASE = "http://localhost:8000";
 
+// Lightweight markdown renderer — no external library needed
+function formatText(text) {
+  // Compress 3+ newlines into 2, and trim
+  let s = text.trim().replace(/\n{3,}/g, "\n\n");
+
+  // Escape HTML first
+  s = s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Bold / Italic
+  s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+  // Headers: ### → <h4>, ## → <h3>
+  s = s.replace(/^### (.+)$/gm, "<h4>$1</h4>");
+  s = s.replace(/^## (.+)$/gm, "<h3>$1</h3>");
+
+  // Numbered / Bullet list items
+  s = s.replace(/^(\d+)\. (.+)$/gm, "<li class='num-item'><span class='num'>$1.</span> $2</li>");
+  s = s.replace(/^[-*] (.+)$/gm, "<li>$1</li>");
+
+  // Wrap list items in <ul>
+  s = s.replace(/(<li[^>]*>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
+
+  // Split into paragraphs ONLY for lines that aren't already block elements
+  const lines = s.split("\n");
+  let result = "";
+  let currentPara = "";
+
+  lines.forEach(line => {
+    const isBlock = /^(<h|<ul|<li)/.test(line);
+    if (isBlock) {
+      if (currentPara) {
+        result += `<p>${currentPara}</p>`;
+        currentPara = "";
+      }
+      result += line;
+    } else {
+      currentPara += (currentPara ? "<br>" : "") + line;
+    }
+  });
+  if (currentPara) result += `<p>${currentPara}</p>`;
+
+  // Final cleanup of any empty tags or leading breaks
+  return result.replace(/<p><\/p>/g, "").trim();
+}
+
 // State
 let conversationHistory = []; // {role, text} for API
 let pendingJobData = null;
@@ -51,98 +100,165 @@ async function handleSend() {
   const text = messageInput.value.trim();
   if (!text) return;
 
+  // Get or create session ID (safely, in case storage permission isn't ready)
+  let session_id;
+  try {
+    const stored = await chrome.storage.local.get("session_id");
+    session_id = stored.session_id;
+    if (!session_id) {
+      session_id = Math.random().toString(36).substring(7);
+      await chrome.storage.local.set({ session_id });
+    }
+  } catch (e) {
+    session_id = session_id || Math.random().toString(36).substring(7);
+  }
+
   // Add user message to UI
   addMessage(text, "user");
   messageInput.value = "";
   messageInput.style.height = "auto";
 
   // Add to conversation history
-  conversationHistory.push({ role: "user", text });
+  conversationHistory.push({ role: "user", content: text });
 
   // Show typing indicator
-  const typingEl = showTyping();
+  currentTypingEl = showTyping();
 
+  // Get Page Context — try content script first, fall back to executeScript
+  let pageContext = "";
   try {
-    const response = await fetch(`${API_BASE}/chat/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: conversationHistory }),
-    });
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url && tab.url.startsWith("http")) {
+      // Try content script message first
+      try {
+        const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_PAGE_CONTEXT" });
+        if (response && response.text) {
+          pageContext = response.text;
+          console.log(`[Popup] Got page context via content script: ${pageContext.length} chars`);
+        }
+      } catch (msgErr) {
+        console.log("[Popup] Content script failed, trying executeScript fallback:", msgErr.message);
+      }
 
-    removeTyping(typingEl);
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || "Request failed");
+      // Fallback: inject script directly to grab page text
+      if (!pageContext && chrome.scripting) {
+        try {
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => document.body.innerText.replace(/\s+/g, " ").trim().substring(0, 15000),
+          });
+          if (results && results[0] && results[0].result) {
+            pageContext = results[0].result;
+            console.log(`[Popup] Got page context via executeScript: ${pageContext.length} chars`);
+          }
+        } catch (execErr) {
+          console.warn("[Popup] executeScript fallback also failed:", execErr.message);
+        }
+      }
     }
-
-    const result = await response.json();
-
-    if (result.type === "job_data") {
-      // Gemini extracted job fields — show confirmation card
-      pendingJobData = result.data;
-      const cardText = "Here's what I extracted. Want me to post this?";
-      conversationHistory.push({ role: "model", text: cardText });
-      addBotMessageWithCard(cardText, result.data);
-    } else {
-      // Gemini needs more info — show follow-up question
-      conversationHistory.push({ role: "model", text: result.text });
-      addMessage(result.text, "bot");
-    }
-  } catch (error) {
-    removeTyping(typingEl);
-    addStatusMessage(`Error: ${error.message}`, "error");
+  } catch (err) {
+    console.warn("[Popup] Could not query tab for context:", err);
   }
 
-  scrollToBottom();
+  // Send request to background script
+  chrome.runtime.sendMessage({
+    type: "CHAT_REQUEST",
+    payload: {
+      messages: conversationHistory,
+      session_id: session_id,
+      page_context: pageContext
+    }
+  });
 }
 
-async function postJob(jobData) {
-  // Disable confirm buttons
-  document.querySelectorAll(".job-actions .btn").forEach((b) => (b.disabled = true));
+// Global state for bot response
+let currentBotResponseEl = null;
+let currentBotText = "";
+let currentTypingEl = null;
 
-  const typingEl = showTyping();
+// Listen for background relay
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === "CHAT_CHUNK") {
+    const chunk = message.data;
 
-  try {
-    const response = await fetch(`${API_BASE}/jobs/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(jobData),
-    });
-
-    removeTyping(typingEl);
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || "Failed to post job");
+    if (chunk.type === "tool_call") {
+      // Agent is calling a tool — convert the "thinking" bubble to a subtle status
+      // and reset ready for the real response after the tool completes
+      if (currentBotResponseEl && currentBotText) {
+        currentBotResponseEl.className = "thinking-text";
+        currentBotResponseEl.innerHTML = `<em>🔍 ${currentBotText.trim()}</em>`;
+      }
+      currentBotResponseEl = null;
+      currentBotText = "";
+      return;
     }
 
-    const result = await response.json();
-    addStatusMessage(
-      `✅ Job posted successfully! Zoho ID: ${result.id}`,
-      "success"
-    );
+    // Only render text chunks
+    if (chunk.type !== "text") return;
 
-    // Reset for next job
-    conversationHistory = [];
-    pendingJobData = null;
-
-    // Add fresh prompt
-    setTimeout(() => {
-      addMessage("Want to post another job? Just describe it!", "bot");
-      conversationHistory.push({
-        role: "model",
-        text: "Want to post another job? Just describe it!",
-      });
-    }, 1000);
-  } catch (error) {
-    removeTyping(typingEl);
-    addStatusMessage(`❌ ${error.message}`, "error");
-    // Re-enable buttons
-    document.querySelectorAll(".job-actions .btn").forEach((b) => (b.disabled = false));
+    removeTyping(currentTypingEl);
+    currentTypingEl = null;
+    if (!currentBotResponseEl) {
+      currentBotResponseEl = createEmptyBotMessage();
+    }
+    if (chunk.content) {
+      currentBotText += chunk.content;
+      updateBotMessage(currentBotResponseEl, currentBotText);
+    }
+    if (chunk.job_data) {
+      pendingJobData = chunk.job_data;
+    }
+  } else if (message.type === "CHAT_DONE") {
+    removeTyping(currentTypingEl);
+    currentTypingEl = null;
+    if (pendingJobData) {
+      addBotMessageWithCard(currentBotText, pendingJobData);
+      // Remove the plain text one we were building
+      if (currentBotResponseEl) {
+        currentBotResponseEl.closest(".message").remove();
+      }
+    } else if (currentBotResponseEl) {
+      currentBotResponseEl.innerHTML = formatText(currentBotText);
+    }
+    conversationHistory.push({ role: "assistant", content: currentBotText });
+    currentBotResponseEl = null;
+    currentBotText = "";
+    scrollToBottom();
+  } else if (message.type === "CHAT_ERROR") {
+    removeTyping(currentTypingEl);
+    currentTypingEl = null;
+    const errMsg = typeof message.error === 'object' ? JSON.stringify(message.error) : message.error;
+    addStatusMessage(`Error: ${errMsg}`, "error");
+    currentBotResponseEl = null;
+    currentBotText = "";
   }
+});
 
-  scrollToBottom();
+function createEmptyBotMessage() {
+  const wrapper = document.createElement("div");
+  wrapper.className = "message bot-message";
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar";
+  const avatarImg = document.createElement("img");
+  avatarImg.src = "logo.png";
+  avatarImg.alt = "T";
+  avatarImg.width = 18;
+  avatar.appendChild(avatarImg);
+
+  const content = document.createElement("div");
+  content.className = "message-content";
+  const p = document.createElement("p");
+  content.appendChild(p);
+
+  wrapper.appendChild(avatar);
+  wrapper.appendChild(content);
+  chatArea.appendChild(wrapper);
+  return p;
+}
+
+function updateBotMessage(el, text) {
+  el.innerHTML = formatText(text);
 }
 
 // ---- UI Helpers ----
@@ -153,11 +269,26 @@ function addMessage(text, sender) {
 
   const avatar = document.createElement("div");
   avatar.className = "message-avatar";
-  avatar.textContent = sender === "user" ? "👤" : "🤖";
+  if (sender === "user") {
+    avatar.textContent = "👤";
+  } else {
+    const img = document.createElement("img");
+    img.src = "logo.png";
+    img.alt = "T";
+    img.width = 18;
+    avatar.appendChild(img);
+  }
 
   const content = document.createElement("div");
   content.className = "message-content";
-  content.innerHTML = `<p>${escapeHtml(text)}</p>`;
+  if (sender === "user") {
+    const p = document.createElement("p");
+    p.style.whiteSpace = "pre-wrap";
+    p.textContent = text;
+    content.appendChild(p);
+  } else {
+    content.innerHTML = formatText(text);
+  }
 
   wrapper.appendChild(avatar);
   wrapper.appendChild(content);
@@ -171,13 +302,19 @@ function addBotMessageWithCard(text, jobData) {
 
   const avatar = document.createElement("div");
   avatar.className = "message-avatar";
-  avatar.textContent = "🤖";
+  const cardAvImg = document.createElement("img");
+  cardAvImg.src = "logo.png";
+  cardAvImg.alt = "T";
+  cardAvImg.width = 18;
+  avatar.appendChild(cardAvImg);
 
   const content = document.createElement("div");
   content.className = "message-content";
 
   // Message text
-  content.innerHTML = `<p>${escapeHtml(text)}</p>`;
+  const msgP = document.createElement("p");
+  msgP.textContent = text;
+  content.appendChild(msgP);
 
   // Job card
   const card = document.createElement("div");
@@ -214,8 +351,8 @@ function addBotMessageWithCard(text, jobData) {
       "bot"
     );
     conversationHistory.push({
-      role: "model",
-      text: "What would you like to change?",
+      role: "assistant",
+      content: "What would you like to change?",
     });
     pendingJobData = null;
   });
@@ -236,12 +373,23 @@ function renderField(label, value) {
 function showTyping() {
   const wrapper = document.createElement("div");
   wrapper.className = "typing-indicator";
-  wrapper.innerHTML = `
-    <div class="message-avatar">🤖</div>
-    <div class="typing-dots">
-      <span></span><span></span><span></span>
-    </div>
-  `;
+
+  const avatarDiv = document.createElement("div");
+  avatarDiv.className = "message-avatar";
+  const typingImg = document.createElement("img");
+  typingImg.src = "logo.png";
+  typingImg.alt = "T";
+  typingImg.width = 18;
+  avatarDiv.appendChild(typingImg);
+
+  const dotsDiv = document.createElement("div");
+  dotsDiv.className = "typing-dots";
+  for (let i = 0; i < 3; i++) {
+    dotsDiv.appendChild(document.createElement("span"));
+  }
+
+  wrapper.appendChild(avatarDiv);
+  wrapper.appendChild(dotsDiv);
   chatArea.appendChild(wrapper);
   scrollToBottom();
   return wrapper;
