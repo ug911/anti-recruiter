@@ -8,17 +8,14 @@
 
   // ---- Inject Widget HTML ----
   function createWidget() {
-    if (document.getElementById("ar-widget-chat")) return;
-
-    // Launcher Tab (FAB)
+    // Floating Action Button
     const fab = document.createElement("button");
     fab.id = "ar-widget-fab";
-    fab.innerHTML = "🚀"; // Standard emoji launcher
-    fab.title = "Talendly Assistant";
+    fab.innerHTML = `<img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="32">`;
     fab.addEventListener("click", toggleChat);
     document.body.appendChild(fab);
 
-    // Chat Sidebar Container
+    // Chat Container
     const chat = document.createElement("div");
     chat.id = "ar-widget-chat";
     chat.innerHTML = `
@@ -27,37 +24,34 @@
         <div class="ar-header">
           <div class="ar-header-left">
             <div class="ar-logo">
-              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="20">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
             </div>
             <div>
               <div class="ar-title">Talendly</div>
-              <div class="ar-subtitle">AI Assistant</div>
+              <div class="ar-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
           <div class="ar-header-right">
-            <div class="ar-status-dot" id="ar-status-dot" title="Connected"></div>
+            <a href="http://localhost:3000" target="_blank" class="ar-dashboard-btn" title="Open Dashboard">📊 Dashboard</a>
+            <div class="ar-status-dot" id="ar-status-dot" title="Backend connected"></div>
           </div>
         </div>
         <div class="ar-home-body">
           <div class="ar-home-greeting">
             <span class="ar-home-wave">👋</span>
-            <h2 class="ar-home-title">Wassup!</h2>
-            <p class="ar-home-desc">Ready to post a job or manage your candidates?</p>
+            <h2 class="ar-home-title">Wassup Talendly!</h2>
+            <p class="ar-home-desc">I'm your AI hiring expert. Ready to post a job?</p>
           </div>
           <div class="ar-home-options">
             <button class="ar-option-card" id="ar-opt-post">
               <span class="ar-option-icon">📝</span>
-              <div>
-                <span class="ar-option-label">Post a Job</span>
-                <span class="ar-option-hint">Automate your job postings</span>
-              </div>
+              <span class="ar-option-label">Post a Job</span>
+              <span class="ar-option-hint">Describe a role and let AI handle the rest</span>
             </button>
             <button class="ar-option-card" id="ar-opt-other">
               <span class="ar-option-icon">💬</span>
-              <div>
-                <span class="ar-option-label">Chat</span>
-                <span class="ar-option-hint">Get help with recruitment</span>
-              </div>
+              <span class="ar-option-label">Others</span>
+              <span class="ar-option-hint">Ask questions or get help</span>
             </button>
           </div>
         </div>
@@ -67,20 +61,28 @@
       <div class="ar-screen ar-screen-chat" id="ar-screen-chat" style="display:none;">
         <div class="ar-header">
           <div class="ar-header-left">
-            <button class="ar-back-btn" id="ar-back-btn">←</button>
+            <button class="ar-back-btn" id="ar-back-btn" title="Back to home">←</button>
+            <div class="ar-logo">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
+            </div>
             <div>
               <div class="ar-title">Talendly</div>
-              <div class="ar-subtitle" id="ar-chat-subtitle">AI Assistant</div>
+              <div class="ar-subtitle" id="ar-chat-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
           <div class="ar-header-right">
-            <div class="ar-status-dot" id="ar-status-dot-chat" title="Connected"></div>
+            <a href="http://localhost:3000" target="_blank" class="ar-dashboard-btn" title="Open Dashboard">📊 Dashboard</a>
+            <div class="ar-status-dot" id="ar-status-dot-chat" title="Backend connected"></div>
           </div>
         </div>
         <div class="ar-messages" id="ar-messages">
           <div class="ar-msg ar-msg-bot">
+            <div class="ar-avatar">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="18">
+            </div>
             <div class="ar-bubble">
-              <p>Hey! How can I help you today?</p>
+              <p>Hey! I'm your Talendly assistant. I can help you post a job instantly.</p>
+              <p class="ar-hint">Try: <em>"Post a Senior React Dev in Bangalore, 5-8 yrs, 25-35 LPA"</em></p>
             </div>
           </div>
         </div>
@@ -89,11 +91,14 @@
             <textarea
               class="ar-input"
               id="ar-input"
-              placeholder="Type your message..."
+              placeholder="Describe the job you want to post..."
               rows="1"
             ></textarea>
-            <button class="ar-send-btn" id="ar-send-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+            <button class="ar-send-btn" id="ar-send-btn" title="Send">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
             </button>
           </div>
         </div>
@@ -151,13 +156,11 @@
       chat.classList.add("ar-visible");
       fab.classList.add("ar-open");
       fab.innerHTML = "✕";
-      document.body.classList.add("ar-sidebar-open");
-      setTimeout(() => document.getElementById("ar-input").focus(), 300);
+      setTimeout(() => document.getElementById("ar-input").focus(), 100);
     } else {
       chat.classList.remove("ar-visible");
       fab.classList.remove("ar-open");
       fab.innerHTML = "🚀";
-      document.body.classList.remove("ar-sidebar-open");
     }
   }
 
