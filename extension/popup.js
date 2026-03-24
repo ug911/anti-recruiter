@@ -185,69 +185,71 @@ async function updateUserMenu() {
   const user = await getCurrentUser();
   const userMenu = document.getElementById("userMenu");
   const loginBtn = document.getElementById("loginBtn");
+  const userNameEl = document.getElementById("userName");
+  const userEmailEl = document.getElementById("userEmail");
 
   if (user) {
     userMenu.classList.remove("hidden");
     loginBtn.classList.add("hidden");
-    document.getElementById("userName").textContent = user.name || user.email;
-    document.getElementById("userEmail").textContent = user.email;
+    
+    // Truncate name for display if it's very long
+    const displayName = user.name || user.email || "User";
+    userNameEl.textContent = displayName;
+    userNameEl.title = displayName; // Show full name on hover
+    
+    userEmailEl.textContent = user.email;
+    userEmailEl.title = user.email;
   } else {
     userMenu.classList.add("hidden");
     loginBtn.classList.remove("hidden");
   }
 }
 
-// Lightweight markdown renderer — no external library needed
-function formatText(text) {
-  // Compress 3+ newlines into 2, and trim
-  let s = text.trim().replace(/\n{3,}/g, "\n\n");
+function setupChatListeners() {
+  // Chat listeners are already defined at the top level
+  console.log("[Popup] Chat listeners initialized");
+}
 
-  // Escape HTML first
-  s = s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+function setupUserMenuListeners() {
+  const userBtn = document.getElementById("userBtn");
+  const userDropdown = document.getElementById("userDropdown");
 
-  // Bold / Italic
-  s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  s = s.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  if (userBtn && userDropdown) {
+    userBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle("hidden");
+    });
 
-  // Headers: ### → <h4>, ## → <h3>
-  s = s.replace(/^### (.+)$/gm, "<h4>$1</h4>");
-  s = s.replace(/^## (.+)$/gm, "<h3>$1</h3>");
-
-  // Numbered / Bullet list items
-  s = s.replace(/^(\d+)\. (.+)$/gm, "<li class='num-item'><span class='num'>$1.</span> $2</li>");
-  s = s.replace(/^[-*] (.+)$/gm, "<li>$1</li>");
-
-  // Wrap list items in <ul>
-  s = s.replace(/(<li[^>]*>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
-
-  // Split into paragraphs ONLY for lines that aren't already block elements
-  const lines = s.split("\n");
-  let result = "";
-  let currentPara = "";
-
-  lines.forEach(line => {
-    const isBlock = /^(<h|<ul|<li)/.test(line);
-    if (isBlock) {
-      if (currentPara) {
-        result += `<p>${currentPara}</p>`;
-        currentPara = "";
+    // Close dropdown on click outside
+    document.addEventListener("click", (e) => {
+      if (!userDropdown.contains(e.target) && !userBtn.contains(e.target)) {
+        userDropdown.classList.add("hidden");
       }
-      result += line;
-    } else {
-      currentPara += (currentPara ? "<br>" : "") + line;
-    }
-  });
-  if (currentPara) result += `<p>${currentPara}</p>`;
+    });
+  }
+}
 
-  // Final cleanup of any empty tags or leading breaks
-  return result.replace(/<p><\/p>/g, "").trim();
+// Configure marked.js for safe and robust rendering
+if (typeof marked !== 'undefined') {
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    headerIds: false,
+    mangle: false
+  });
+}
+
+function formatText(text) {
+  if (typeof marked !== 'undefined') {
+    return marked.parse(text);
+  }
+  // Fallback to basic escaping if marked is somehow missing
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
 }
 
 // State
 let conversationHistory = []; // {role, text} for API
+let currentUser = null;
 let pendingJobData = null;
 
 // DOM Elements
@@ -293,7 +295,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   console.log("[Popup] Authenticated, showing chat screen");
   showChatScreen();
+  currentUser = await getCurrentUser();
   await updateUserMenu();
+  
+  // Get session ID and load history
+  const stored = await chrome.storage.local.get("session_id");
+  let session_id = stored.session_id;
+  console.log("[Popup] Using session_id:", session_id);
+  if (!session_id) {
+    session_id = Math.random().toString(36).substring(7);
+    await chrome.storage.local.set({ session_id });
+  }
+  
+  await loadChatHistory(session_id, currentUser ? currentUser.email : null);
+  
   checkBackendStatus();
   messageInput.focus();
 
@@ -351,6 +366,8 @@ async function handleSend() {
     session_id = session_id || Math.random().toString(36).substring(7);
   }
 
+  const userEmail = currentUser ? currentUser.email : null;
+
   // Add user message to UI
   addMessage(text, "user");
   messageInput.value = "";
@@ -404,6 +421,7 @@ async function handleSend() {
     payload: {
       messages: conversationHistory,
       session_id: session_id,
+      user_email: userEmail,
       page_context: pageContext
     }
   });
@@ -479,6 +497,7 @@ chrome.runtime.onMessage.addListener((message) => {
       }
     } else if (currentBotResponseEl) {
       currentBotResponseEl.innerHTML = formatText(currentBotText);
+      currentBotResponseEl.closest(".message").classList.remove("is-typing");
     }
     conversationHistory.push({ role: "assistant", content: currentBotText });
     currentBotResponseEl = null;
@@ -496,7 +515,7 @@ chrome.runtime.onMessage.addListener((message) => {
 
 function createEmptyBotMessage() {
   const wrapper = document.createElement("div");
-  wrapper.className = "message bot-message";
+  wrapper.className = "message bot-message is-typing";
 
   const avatar = document.createElement("div");
   avatar.className = "message-avatar";
@@ -628,6 +647,37 @@ function renderField(label, value) {
       <span class="job-field-value">${escapeHtml(value)}</span>
     </div>
   `;
+}
+
+async function loadChatHistory(session_id, user_email) {
+  try {
+    console.log("[Popup] Loading chat history...");
+    let url = `${API_BASE}/chat/history?session_id=${session_id}`;
+    if (user_email && user_email !== 'null' && user_email !== 'undefined') {
+      url += `&user_email=${encodeURIComponent(user_email)}`;
+    }
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch history");
+    
+    const history = await response.json();
+    console.log("[Popup] Received history:", history.length, "messages");
+    
+    // Clear initial greeting if history exists
+    if (history.length > 0) {
+      chatArea.innerHTML = "";
+      conversationHistory = history;
+      
+      // Render historical messages
+      history.forEach(msg => {
+        addMessage(msg.content, msg.role);
+      });
+      
+      scrollToBottom();
+    }
+  } catch (error) {
+    console.error("[Popup] Error loading chat history:", error);
+  }
 }
 
 function showTyping() {

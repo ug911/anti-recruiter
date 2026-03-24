@@ -7,3 +7,5 @@ requests
 sse-starlette
 pydantic
 langfuse
+sqlalchemy
+pymysql

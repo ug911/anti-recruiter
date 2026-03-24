@@ -178,6 +178,9 @@ body {
   border-radius: var(--radius);
   font-size: 13px;
   line-height: 1.5;
+  word-break: break-word; /* Ensure long words don't overflow */
+  max-width: 100%;
+  overflow-x: hidden; /* Prevent horizontal scroll on the bubble itself */
 }
 
 .bot-message .message-content {
@@ -200,39 +203,134 @@ body {
   margin-bottom: 0;
 }
 
-/* Markdown Styles */
-.message-content h3 {
-  font-size: 15px;
-  margin: 6px 0 4px 0;
+/* Premium Markdown Styles */
+.message-content h1, .message-content h2, .message-content h3 {
+  font-size: 16px;
+  margin: 12px 0 8px 0;
   color: var(--accent);
+  font-weight: 700;
+  line-height: 1.3;
 }
 
-.message-content h4 {
+.message-content h4, .message-content h5 {
   font-size: 14px;
-  margin: 4px 0 2px 0;
+  margin: 10px 0 6px 0;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
-.message-content ul {
-  margin: 4px 0;
-  padding-left: 18px;
+.message-content p {
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.message-content ul, .message-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
 }
 
 .message-content li {
-  margin-bottom: 4px;
-  list-style-type: disc;
+  margin-bottom: 6px;
 }
 
-.message-content li.num-item {
-  list-style-type: none;
-  position: relative;
-  padding-left: 0;
-}
-
-.message-content .num {
-  font-weight: 600;
+.message-content li::marker {
   color: var(--accent);
-  margin-right: 4px;
+  font-weight: 600;
+}
+
+/* Tables */
+.message-content table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+}
+
+.message-content th {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap; /* Prevent headers from wrapping unnaturally */
+}
+
+.message-content td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  white-space: normal;
+  word-break: normal; /* Don't break words in the middle */
+  min-width: 80px;    /* Give cells some breathing room */
+}
+
+.message-content tr:last-child td {
+  border-bottom: none;
+}
+
+.message-content tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
+/* Code Blocks */
+.message-content code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  background: var(--bg-secondary);
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: #d63384; /* Highlight color */
+}
+
+.message-content pre {
+  background: #1e1e1e;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.message-content pre code {
+  background: none;
+  padding: 0;
+  color: #e6e6e6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Blockquotes */
+.message-content blockquote {
+  margin: 12px 0;
+  padding: 8px 16px;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-glow);
+  color: var(--text-secondary);
+  font-style: italic;
+  border-radius: 0 8px 8px 0;
+}
+
+.message-content blockquote p {
+  margin-bottom: 0;
+}
+
+/* Links */
+.message-content a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.message-content a:hover {
+  border-bottom-color: var(--accent);
 }
 
 /* Thinking / Status Text */
@@ -242,6 +340,19 @@ body {
   font-style: italic;
   display: block;
   margin-bottom: 4px;
+}
+
+.bot-message.is-typing .message-content p:last-child::after {
+  content: '▋';
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: var(--accent);
+  animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  50% { opacity: 0; }
 }
 
 .hint {
@@ -525,34 +636,38 @@ textarea::placeholder {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 8px;
-  background: var(--bg-primary);
+  margin-top: 4px; /* Closer to the icon */
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow);
-  min-width: 140px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  min-width: 120px; /* Slimmer */
   z-index: 1000;
+  backdrop-filter: blur(8px);
 }
 
 .user-info {
-  padding: 12px 14px;
+  padding: 8px 10px; /* More compact */
 }
 
 .user-name {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 500; /* Lighter */
+  font-size: 11px;  /* Smaller */
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100px; /* Force truncation for long names */
 }
 
 .user-email {
-  font-size: 11px;
+  font-size: 10px;  /* Tiny */
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100px;
+  opacity: 0.7;    /* Subtle */
 }
 
 .dropdown hr {

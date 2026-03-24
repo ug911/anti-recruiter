@@ -5,8 +5,10 @@
 
   // State
   let conversationHistory = [];
+  let currentUser = null;
   let pendingJobData = null;
   let isOpen = false;
+  let hasLoadedHistory = false;
 
   // ---- Inject Widget HTML ----
   function createWidget() {
@@ -152,25 +154,27 @@
       input.style.height = Math.min(input.scrollHeight, 72) + "px";
     });
 
-    // Wire up home screen events
+    // Event Listeners
+    document.getElementById("ar-login-btn").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "OPEN_LOGIN" });
+    });
     document.getElementById("ar-opt-post").addEventListener("click", () => navigateToChat("Post a Job"));
-    document.getElementById("ar-opt-other").addEventListener("click", () => navigateToChat("Others"));
+    document.getElementById("ar-opt-other").addEventListener("click", () => navigateToChat("Ask me anything"));
     document.getElementById("ar-back-btn").addEventListener("click", navigateToHome);
 
-    // Wire up login
-    document.getElementById("ar-login-btn").addEventListener("click", () => {
-      chrome.runtime.sendMessage({ type: "START_LOGIN" });
-    });
+    // Close on click outside (optional, but good for UX)
+    // Removed for now to avoid accidental closes during testing
 
-    // Check auth status on load
-    checkAuthAndShow();
+    // Initial check
+    checkAuth();
     checkBackendStatus();
   }
 
   // ---- Auth Check ----
-  function checkAuthAndShow() {
+  async function checkAuth() {
     chrome.runtime.sendMessage({ type: "CHECK_AUTH" }, (response) => {
       if (response && response.authenticated) {
+        currentUser = response.user;
         showAuthenticated();
       } else {
         showLoginScreen();
@@ -193,10 +197,20 @@
   }
 
   // ---- Screen Navigation ----
-  function navigateToChat(label) {
+  async function navigateToChat(subtitle) {
     document.getElementById("ar-screen-home").style.display = "none";
     document.getElementById("ar-screen-chat").style.display = "flex";
-    document.getElementById("ar-chat-subtitle").textContent = label;
+    document.getElementById("ar-chat-subtitle").textContent = subtitle;
+    
+    // Load history if not already loaded for this session
+    if (!hasLoadedHistory) {
+      const stored = await chrome.storage.local.get("session_id");
+      if (stored.session_id) {
+        await loadChatHistory(stored.session_id, currentUser ? currentUser.email : null);
+      }
+      hasLoadedHistory = true;
+    }
+    
     setTimeout(() => document.getElementById("ar-input").focus(), 100);
   }
 
@@ -250,6 +264,8 @@
       session_id = Math.random().toString(36).substring(7);
       await chrome.storage.local.set({ session_id });
     }
+    
+    const userEmail = currentUser ? currentUser.email : null;
 
     addMessage(text, "user");
     input.value = "";
@@ -289,6 +305,7 @@
           if (botMessageEl) botMessageEl.closest(".ar-msg").remove();
         } else if (botMessageEl) {
           botMessageEl.innerHTML = marked.parse(botText);
+          botMessageEl.closest(".ar-msg").classList.remove("ar-is-typing");
         }
         conversationHistory.push({ role: "assistant", content: botText });
         scrollToBottom();
@@ -318,7 +335,7 @@
 
   function createEmptyBotMessage() {
     const msg = document.createElement("div");
-    msg.className = "ar-msg ar-msg-bot";
+    msg.className = "ar-msg ar-msg-bot ar-is-typing";
     msg.innerHTML = `
       <div class="ar-avatar">🤖</div>
       <div class="ar-bubble"><p></p></div>
@@ -334,6 +351,16 @@
       el.textContent = text;
       el.style.whiteSpace = "pre-wrap";
     }
+  }
+
+  // Configure marked for content script
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false
+    });
   }
 
   // ---- UI Helpers ----
@@ -434,6 +461,40 @@
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function getMessages() {
+    return document.getElementById("ar-messages");
+  }
+
+  async function loadChatHistory(session_id, user_email) {
+    try {
+      console.log("[Anti-Recruiter] Loading chat history...");
+      let url = `${API_BASE}/chat/history?session_id=${session_id}`;
+      if (user_email && user_email !== 'null' && user_email !== 'undefined') {
+        url += `&user_email=${encodeURIComponent(user_email)}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch history");
+
+      const history = await response.json();
+      console.log("[Anti-Recruiter] Received history:", history.length, "messages");
+
+      if (history.length > 0) {
+        const msgContainer = getMessages();
+        msgContainer.innerHTML = "";
+        conversationHistory = history;
+
+        history.forEach(msg => {
+          addMessage(msg.content, msg.role);
+        });
+
+        scrollToBottom();
+      }
+    } catch (error) {
+      console.error("[Anti-Recruiter] Error loading chat history:", error);
+    }
   }
 
   function getPageText() {

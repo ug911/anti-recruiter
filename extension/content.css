@@ -385,6 +385,9 @@
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 13px;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 #ar-widget-chat .ar-msg-bot .ar-bubble {
@@ -401,11 +404,143 @@
 }
 
 #ar-widget-chat .ar-bubble p {
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+  line-height: 1.6;
 }
 
 #ar-widget-chat .ar-bubble p:last-child {
   margin-bottom: 0;
+}
+
+/* Premium Markdown Styles for Floating Widget */
+#ar-widget-chat .ar-bubble h1, 
+#ar-widget-chat .ar-bubble h2, 
+#ar-widget-chat .ar-bubble h3 {
+  font-size: 15px;
+  margin: 12px 0 6px 0;
+  color: #7c5cfc;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+#ar-widget-chat .ar-bubble h4, 
+#ar-widget-chat .ar-bubble h5 {
+  font-size: 13px;
+  margin: 10px 0 4px 0;
+  color: #e4e4ec;
+  font-weight: 600;
+}
+
+#ar-widget-chat .ar-bubble ul, 
+#ar-widget-chat .ar-bubble ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+#ar-widget-chat .ar-bubble li {
+  margin-bottom: 4px;
+}
+
+#ar-widget-chat .ar-bubble li::marker {
+  color: #7c5cfc;
+  font-weight: 600;
+}
+
+/* Tables in Floating Widget */
+#ar-widget-chat .ar-bubble table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+  background: #16161e;
+  border-radius: 8px;
+  border: 1px solid #2a2a3a;
+  -webkit-overflow-scrolling: touch;
+}
+
+#ar-widget-chat .ar-bubble th {
+  background: #252535;
+  color: #e4e4ec;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2a2a3a;
+  white-space: nowrap;
+}
+
+#ar-widget-chat .ar-bubble td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e1e2a;
+  color: #8b8ba0;
+  white-space: normal;
+  word-break: normal;
+  min-width: 80px;
+}
+
+#ar-widget-chat .ar-bubble tr:last-child td {
+  border-bottom: none;
+}
+
+#ar-widget-chat .ar-bubble tr:nth-child(even) {
+  background: #1e1e2a;
+}
+
+/* Code Blocks in Floating Widget */
+#ar-widget-chat .ar-bubble code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 11px;
+  background: #252535;
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: #ff79c6; /* Dracula-like pink */
+}
+
+#ar-widget-chat .ar-bubble pre {
+  background: #0f0f14;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 12px 0;
+  overflow-x: auto;
+  border: 1px solid #2a2a3a;
+  max-width: 100%;
+}
+
+#ar-widget-chat .ar-bubble pre code {
+  background: none;
+  padding: 0;
+  color: #e4e4ec;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Blockquotes in Floating Widget */
+#ar-widget-chat .ar-bubble blockquote {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #7c5cfc;
+  background: rgba(124, 92, 252, 0.1);
+  color: #8b8ba0;
+  font-style: italic;
+  border-radius: 0 6px 6px 0;
+}
+
+#ar-widget-chat .ar-bubble blockquote p {
+  margin-bottom: 0;
+}
+
+/* Links in Floating Widget */
+#ar-widget-chat .ar-bubble a {
+  color: #7c5cfc;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+#ar-widget-chat .ar-bubble a:hover {
+  border-bottom-color: #7c5cfc;
+  color: #6b4ce0;
 }
 
 #ar-widget-chat .ar-hint {
@@ -535,6 +670,19 @@
   background: rgba(248, 113, 113, 0.1);
   color: #f87171;
   border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+#ar-widget-chat .ar-msg-bot.ar-is-typing .ar-bubble p:last-child::after {
+  content: '▋';
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: #7c5cfc;
+  animation: ar-cursor-blink 1s step-end infinite;
+}
+
+@keyframes ar-cursor-blink {
+  50% { opacity: 0; }
 }
 
 /* Typing Indicator */
