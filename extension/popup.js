@@ -1,5 +1,202 @@
 const API_BASE = "http://localhost:8000";
 
+// ---- Setup Message Listener Early ----
+// This must be set up before anything else so iframe messages are caught
+window.addEventListener("message", (event) => {
+  console.log("[Popup] Received message from iframe:", event.data);
+
+  if (event.data.type === "AUTH_TOKEN") {
+    console.log("[Popup] Received auth token");
+    const token = event.data.token;
+    
+    setAuthToken(token).then(async () => {
+      console.log("[Popup] Token saved, switching to chat screen");
+      await updateUserMenu();
+      showChatScreen();
+    });
+  } else if (event.data.type === "AUTH_ERROR") {
+    console.error("[Popup] Auth error:", event.data.error);
+    alert("Login failed: " + event.data.error);
+    showAuthScreen();
+  }
+});
+
+// ---- Auth Functions ----
+
+/**
+ * Check if user is authenticated
+ */
+async function checkAuth() {
+  return new Promise((resolve) => {
+    console.log("[Popup] Checking auth status...");
+    chrome.runtime.sendMessage({ type: "CHECK_AUTH" }, (response) => {
+      console.log("[Popup] Received auth response:", response);
+      if (chrome.runtime.lastError) {
+        console.error("[Popup] Error checking auth:", chrome.runtime.lastError);
+        resolve({ authenticated: false });
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+/**
+ * Get current user info
+ */
+async function getCurrentUser() {
+  return new Promise((resolve) => {
+    console.log("[Popup] Getting current user...");
+    chrome.runtime.sendMessage({ type: "GET_USER" }, (response) => {
+      console.log("[Popup] Received user response:", response);
+      if (chrome.runtime.lastError) {
+        console.error("[Popup] Error getting user:", chrome.runtime.lastError);
+        resolve(null);
+      } else {
+        resolve(response.user);
+      }
+    });
+  });
+}
+
+/**
+ * Validate token against server
+ */
+async function validateToken(token) {
+  try {
+    console.log("[Popup] Validating token against server...");
+    const response = await fetch(`${API_BASE}/auth/validate`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (response.status === 401) {
+      console.log("[Popup] Token validation failed: 401 Unauthorized");
+      return false;
+    }
+
+    if (response.ok) {
+      console.log("[Popup] Token validation successful");
+      return true;
+    }
+
+    console.log("[Popup] Token validation returned status:", response.status);
+    return false;
+  } catch (error) {
+    console.error("[Popup] Error validating token:", error);
+    // If fetch fails, assume token might still be valid (network error)
+    // Better to show login than stay stuck
+    return false;
+  }
+}
+
+/**
+ * Set auth token
+ */
+async function setAuthToken(token) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: "SET_AUTH_TOKEN", token }, (response) => {
+      console.log("[Popup] Token set response:", response);
+      resolve(response);
+    });
+  });
+}
+
+/**
+ * Start login flow with iframe
+ */
+function startLogin() {
+  console.log("[Popup] Starting login with iframe");
+  const loginScreen = document.getElementById("loginScreen");
+  const loginIframe = document.getElementById("loginIframe");
+  
+  if (!loginScreen || !loginIframe) {
+    console.error("[Popup] Login screen or iframe not found");
+    return;
+  }
+
+  // Show login screen
+  chatArea.classList.add("hidden");
+  const inputArea = document.querySelector(".input-area");
+  inputArea.classList.add("hidden");
+  const userMenu = document.getElementById("userMenu");
+  if (userMenu) userMenu.classList.add("hidden");
+  
+  loginScreen.classList.remove("hidden");
+
+  // Build callback URL pointing to extension callback page
+  const callbackUrl = chrome.runtime.getURL('callback.html');
+  const redirectUri = encodeURIComponent(callbackUrl);
+  const loginUrl = `http://localhost:3001/api/auth/exchange-token?redirect_uri=${redirectUri}`;
+
+  console.log("[Popup] Loading login iframe");
+  console.log("[Popup] Callback URL:", callbackUrl);
+  console.log("[Popup] Login URL:", loginUrl);
+  
+  // Set iframe src to trigger navigation
+  loginIframe.src = loginUrl;
+  
+  // Listen for iframe load
+  loginIframe.onload = () => {
+    console.log("[Popup] Iframe loaded");
+  };
+  
+  loginIframe.onerror = () => {
+    console.error("[Popup] Iframe load error");
+  };
+}
+
+/**
+ * Show auth screen (login iframe)
+ */
+function showAuthScreen() {
+  console.log("[Popup] Showing auth screen");
+  chatArea.classList.add("hidden");
+  const inputArea = document.querySelector(".input-area");
+  inputArea.classList.add("hidden");
+  const userMenu = document.getElementById("userMenu");
+  if (userMenu) userMenu.classList.add("hidden");
+  
+  const loginScreen = document.getElementById("loginScreen");
+  if (loginScreen) {
+    loginScreen.classList.remove("hidden");
+    // Start login immediately
+    startLogin();
+  }
+}
+
+/**
+ * Show chat interface
+ */
+function showChatScreen() {
+  const loginScreen = document.getElementById("loginScreen");
+  if (loginScreen) loginScreen.classList.add("hidden");
+  chatArea.classList.remove("hidden");
+  document.querySelector(".input-area").classList.remove("hidden");
+  document.getElementById("userMenu").classList.remove("hidden");
+}
+
+/**
+ * Update user menu
+ */
+async function updateUserMenu() {
+  const user = await getCurrentUser();
+  const userMenu = document.getElementById("userMenu");
+  const loginBtn = document.getElementById("loginBtn");
+
+  if (user) {
+    userMenu.classList.remove("hidden");
+    loginBtn.classList.add("hidden");
+    document.getElementById("userName").textContent = user.name || user.email;
+    document.getElementById("userEmail").textContent = user.email;
+  } else {
+    userMenu.classList.add("hidden");
+    loginBtn.classList.remove("hidden");
+  }
+}
+
 // Lightweight markdown renderer — no external library needed
 function formatText(text) {
   // Compress 3+ newlines into 2, and trim
@@ -60,9 +257,50 @@ const sendBtn = document.getElementById("sendBtn");
 const statusDot = document.getElementById("statusDot");
 
 // ---- Initialization ----
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("[Popup] DOMContentLoaded - initializing");
+  
+  // Check auth first
+  const authStatus = await checkAuth();
+  console.log("[Popup] Auth status:", authStatus);
+  
+  if (!authStatus.authenticated) {
+    console.log("[Popup] Not authenticated, showing auth screen");
+    showAuthScreen();
+    return;
+  }
+
+  // Validate token against server
+  const token = await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: "GET_TOKEN" }, (response) => {
+      resolve(response.token);
+    });
+  });
+
+  if (token) {
+    const isValid = await validateToken(token);
+    if (!isValid) {
+      console.log("[Popup] Token validation failed, clearing token and showing login");
+      await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "CLEAR_TOKEN" }, (response) => {
+          resolve(response);
+        });
+      });
+      showAuthScreen();
+      return;
+    }
+  }
+
+  console.log("[Popup] Authenticated, showing chat screen");
+  showChatScreen();
+  await updateUserMenu();
   checkBackendStatus();
   messageInput.focus();
+
+  // Setup chat event listeners
+  setupChatListeners();
+  // Setup user menu event listeners
+  setupUserMenuListeners();
 });
 
 sendBtn.addEventListener("click", handleSend);
@@ -178,6 +416,28 @@ let currentTypingEl = null;
 
 // Listen for background relay
 chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === "AUTH_SUCCESS") {
+    // User successfully logged in, reload popup
+    location.reload();
+    return;
+  }
+
+  if (message.type === "AUTH_LOGOUT") {
+    // User logged out, reload popup
+    location.reload();
+    return;
+  }
+
+  if (message.type === "AUTH_REQUIRED") {
+    // Token became invalid, show login screen
+    console.log("[Popup] Auth required - token is invalid");
+    clearCurrentMessage();
+    addStatusMessage("Session expired. Please login again.", "error");
+    setTimeout(() => {
+      showAuthScreen();
+    }, 1500);
+    return;
+  }
   if (message.type === "CHAT_CHUNK") {
     const chunk = message.data;
 

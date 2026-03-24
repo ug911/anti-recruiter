@@ -1,6 +1,8 @@
 (() => {
   const API_BASE = "http://localhost:8000";
 
+  let isAuthenticated = false;
+
   // State
   let conversationHistory = [];
   let pendingJobData = null;
@@ -19,8 +21,36 @@
     const chat = document.createElement("div");
     chat.id = "ar-widget-chat";
     chat.innerHTML = `
+    <!-- LOGIN SCREEN -->
+      <div class="ar-screen ar-screen-login" id="ar-screen-login">
+        <div class="ar-header">
+          <div class="ar-header-left">
+            <div class="ar-logo">
+              <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
+            </div>
+            <div>
+              <div class="ar-title">Talendly</div>
+              <div class="ar-subtitle">AI Hiring Assistant</div>
+            </div>
+          </div>
+        </div>
+        <div class="ar-home-body">
+          <div class="ar-home-greeting">
+            <span class="ar-home-wave">🔒</span>
+            <h2 class="ar-home-title">Login Required</h2>
+            <p class="ar-home-desc">Sign in with your Hub account to use the assistant.</p>
+          </div>
+          <div class="ar-home-options">
+            <button class="ar-option-card" id="ar-login-btn">
+              <span class="ar-option-icon">🚀</span>
+              <span class="ar-option-label">Login via Hub</span>
+              <span class="ar-option-hint">Uses your existing company account</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <!-- HOME SCREEN -->
-      <div class="ar-screen ar-screen-home" id="ar-screen-home">
+      <div class="ar-screen ar-screen-home" id="ar-screen-home" style="display:none;">
         <div class="ar-header">
           <div class="ar-header-left">
             <div class="ar-logo">
@@ -127,7 +157,39 @@
     document.getElementById("ar-opt-other").addEventListener("click", () => navigateToChat("Others"));
     document.getElementById("ar-back-btn").addEventListener("click", navigateToHome);
 
+    // Wire up login
+    document.getElementById("ar-login-btn").addEventListener("click", () => {
+      chrome.runtime.sendMessage({ type: "START_LOGIN" });
+    });
+
+    // Check auth status on load
+    checkAuthAndShow();
     checkBackendStatus();
+  }
+
+  // ---- Auth Check ----
+  function checkAuthAndShow() {
+    chrome.runtime.sendMessage({ type: "CHECK_AUTH" }, (response) => {
+      if (response && response.authenticated) {
+        showAuthenticated();
+      } else {
+        showLoginScreen();
+      }
+    });
+  }
+
+  function showAuthenticated() {
+    isAuthenticated = true;
+    document.getElementById("ar-screen-login").style.display = "none";
+    document.getElementById("ar-screen-home").style.display = "flex";
+    document.getElementById("ar-screen-chat").style.display = "none";
+  }
+
+  function showLoginScreen() {
+    isAuthenticated = false;
+    document.getElementById("ar-screen-login").style.display = "flex";
+    document.getElementById("ar-screen-home").style.display = "none";
+    document.getElementById("ar-screen-chat").style.display = "none";
   }
 
   // ---- Screen Navigation ----
@@ -391,6 +453,20 @@
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "GET_PAGE_CONTEXT") {
       sendResponse({ text: getPageText() });
+    }
+    if (request.type === "AUTH_SUCCESS") {
+      showAuthenticated();
+    }
+    if (request.type === "AUTH_REQUIRED") {
+      showLoginScreen();
+    }
+    if (request.type === "AUTH_ERROR") {
+      const loginScreen = document.getElementById("ar-screen-login");
+      if (loginScreen) {
+        const desc = loginScreen.querySelector(".ar-home-desc");
+        if (desc) desc.textContent = request.error || "Authentication failed. Please try again.";
+      }
+      showLoginScreen();
     }
     return true;
   });

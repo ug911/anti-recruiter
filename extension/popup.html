@@ -22,7 +22,30 @@
           <span class="subtitle">AI Hiring Assistant</span>
         </div>
       </div>
-      <div class="status-dot" id="statusDot" title="Backend connected"></div>
+      <div class="header-right">
+        <div class="status-dot" id="statusDot" title="Backend connected"></div>
+        <div class="user-menu" id="userMenu" class="hidden">
+          <button class="user-btn" id="userBtn" title="User menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+          <div class="dropdown" id="userDropdown" class="hidden">
+            <div class="user-info">
+              <div id="userName" class="user-name"></div>
+              <div id="userEmail" class="user-email"></div>
+            </div>
+          </div>
+        </div>
+        <button id="loginBtn" class="login-btn hidden">Login</button>
+      </div>
+    </header>
+
+    <!-- Login Iframe Screen -->
+    <div class="login-screen" id="loginScreen" class="hidden">
+      <iframe id="loginIframe" class="login-iframe" title="Login"></iframe>
+    </div>
     </header>
 
     <!-- Chat Area -->

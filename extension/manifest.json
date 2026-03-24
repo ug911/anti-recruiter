@@ -21,7 +21,9 @@
       "resources": [
         "content.css",
         "logo.png",
-        "marked.min.js"
+        "marked.min.js",
+        "callback.html",
+        "callback.js"
       ],
       "matches": [
         "<all_urls>"
@@ -45,10 +47,14 @@
   "permissions": [
     "storage",
     "tabs",
-    "scripting"
+    "scripting",
+    "webNavigation"
   ],
   "host_permissions": [
     "http://localhost:8000/*",
+    "http://localhost:8001/*",
+    "http://localhost:3000/*",
+    "http://localhost:3001/*",
     "*://*.linkedin.com/*",
     "*://*.indeed.com/*",
     "*://*.glassdoor.com/*"
