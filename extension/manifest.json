@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Talendly Hiring Assistant",
+  "name": "Talendy Hiring Assistant",
   "version": "1.0.0",
-  "description": "Talendly's expert AI assistant to help you post and manage jobs instantly.",
+  "description": "Talendy's expert AI assistant to help you post and manage jobs instantly.",
   "icons": {
     "16": "logo.png",
     "48": "logo.png",
