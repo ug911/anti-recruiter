@@ -29,7 +29,7 @@
               <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
             </div>
             <div>
-              <div class="ar-title">Talendly</div>
+              <div class="ar-title">Talendy</div>
               <div class="ar-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
@@ -57,7 +57,7 @@
               <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
             </div>
             <div>
-              <div class="ar-title">Talendly</div>
+              <div class="ar-title">Talendy</div>
               <div class="ar-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
@@ -69,7 +69,7 @@
         <div class="ar-home-body">
           <div class="ar-home-greeting">
             <span class="ar-home-wave">👋</span>
-            <h2 class="ar-home-title">Wassup Talendly!</h2>
+            <h2 class="ar-home-title">Wassup Talendy!</h2>
             <p class="ar-home-desc">I'm your AI hiring expert. Ready to post a job?</p>
           </div>
           <div class="ar-home-options">
@@ -96,7 +96,7 @@
               <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="24">
             </div>
             <div>
-              <div class="ar-title">Talendly</div>
+              <div class="ar-title">Talendy</div>
               <div class="ar-subtitle" id="ar-chat-subtitle">AI Hiring Assistant</div>
             </div>
           </div>
@@ -111,7 +111,7 @@
               <img src="${chrome.runtime.getURL('logo.png')}" alt="T" width="18">
             </div>
             <div class="ar-bubble">
-              <p>Hey! I'm your Talendly assistant. I can help you post a job instantly.</p>
+              <p>Hey! I'm your Talendy assistant. I can help you post a job instantly.</p>
               <p class="ar-hint">Try: <em>"Post a Senior React Dev in Bangalore, 5-8 yrs, 25-35 LPA"</em></p>
             </div>
           </div>
